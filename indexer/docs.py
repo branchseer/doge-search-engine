@@ -6,7 +6,7 @@ def documents(page_folder = path.join('..', 'pages')):
     for filename in filenames:
       extension = path.splitext(filename)[1]
       
-      if extension == '.html' or extension == '.txt':
+      if extension in ['.html', '.htm', '.txt']:
         filepath = path.join(dirpath, filename)
         file = open(filepath)
         file_content = file.read()
