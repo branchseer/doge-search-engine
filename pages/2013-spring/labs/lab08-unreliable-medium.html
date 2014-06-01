@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 08: Simulating Unreliable Medium</h2>
+
+<h4>Goals</h4>
+
+<ul>
+   <li> <font color=red><b>Create an application-level mechanism by which you can simulate packet loss:</b></font> You have been working with UDP, which promises only best-effort delivery of datagrams, but may never have seen any loss. In order for us to be able to construct, experiment, and test protocols for reliable delivery, we need to have some way to induce loss. In this lab, you will create a process which, when interposed between between two programs communicating with UDP datagrams, will drop traffic statistically.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The material for this lab was created by Prof. L. Felipe Perrone based on previous work by Prof. Xiannong Meng (Bucknell University). Permission to reuse this material in parts or in its entirety is granted provided that the credits note is not removed. Additional students files associated with this lab, as well as any existing solutions, can be provided upon request by e-mail to <em>perrone[at]bucknell[dot]edu</em>.</p>
+
+<h4>The User Datagram Protocol (UDP)</h4>
+
+<p>Internet protocols are described in documents called Request for Comments, or RFC, which establish standards and invite people in the community to experiment with and comment on them. UDP is described in <a href = "http://www.ietf.org/rfc/rfc768.txt">RFC 768</a> from 1980. As you already know, this protocol can be used via the sockets API: the client process creates a <em>SOCK_DGRAM</em> socket, which uses it to transmit messages to a process on the other side of the socket.</p>
+
+<p>The user messages sent on the socket are encapsulated in an UDP datagram, which is in itself encapsulated in an IP datagram, which is then sent to its destination in a frame. UDP is not a reliable protocol. UDP datagrams are simply dropped en route to their destination if their CRC indicates an error, or if a router runs out of buffer space. The dropped datagrams are not retransmitted by protocols in layers below the application layer. This means that the application is responsible for sending acknowledgments, and for dealing with timeouts and retransmissions to guarantee that its data is not lost.</p>
+
+<p>UDP prepends its 8-byte header to an application datagram and passes it to IP. In its own turn, IP prepends its header to the UDP datagram and passes the resulting data to the appropriate outgoing interface. The final datagram is directly added to the output queue of the underlying link, if it is small enough, or else the datagram is fragmented, according to the MTU of the link.</p>
+
+<p>When a send on a UDP socket returns successfully, the datagram (or all its fragments) have been added to the datalink output queue. If there is no space for the datagram or one of its fragments in that output queue cant be sent, the application receives <em>ENOBUFS</em> error message.</p>
+
+<h4>Problem 1</h4>
+
+<p>Create two programs that communicate bi-directionally using UDP datagrams according to the specifications below. You may certainly use the UDP programs created in our previous lab as a starting point. The <em>source/sink</em> pair in this lab is simpler than the ones we did in our earlier UDP lab.</p>
+<ul>
+   <li> <font color=red>source.c</font> -- sends a message of arbitrary, but valid length to a recipient and waits for the echo. The command line invocation for this program must be as follows:<br>
+<b>source [server name] [port number] [message length]</b>, where
+    <ul>
+      <li> <em>server name</em> is the symbolic name of the host where the receiver, i.e., the <em>sink</em> resides.</li>
+      <li> <em>port number</em> indicates the port where the receiver expects to receive datagrams.</li>
+      <li> <em>message length</em> is the length of the message to send.</li>
+   </ul>
+
+   <li> <font color=red>sink.c</font> -- receives the message from the <em>source</em>, sends the message right back to the sender. The command line invocation for this program must be as follows:<br>
+<b>sink [port number]</b> <br>
+where <em>port number</em> indicates the port where the receiver expects to receive data.</li>
+</ul>
+
+<p>The source program should also check and report if there is any discrepancy between the message sent and the message received from the sink program. In this part of the lab, the message is not altered, so the one sent should be identical to the one received. Thus we should only see a positive report in this part of the lab.</p>
+
+<h4>Problem 2</h4>
+
+<p> Create a new program <font color=red>gateway.c</font> which  receives a UDP datagram from <em>source</em> and forwards it to <em>sink</em>.  With a probability <em>p</em> one byte of the message is altered before the message is sent to <em>sink</em>. For example, if <em>p</em> is chosen as 0.3, then the program should generate a random number <em>r</em> between 0 and 1. If <em>r</em> is less than 0.3, the program alters the value of the first byte in the message by some mechanism of your choice, e.g., adding 1 to the byte. After sending the message to the sink, the gateway waits and receives the message sent back by <em>sink</em> and sends it back to <em>source</em>. Print a message in the gateway if the value is altered (i.e., the randomly generated error value is less than the threshold.) This message helps monitoring the program behavior. Note that when the gateway indicates that the message has been altered, the <em>source</em> program should now detect that the message received from the gateway is different from the message the source sent to the gateway earlier.</p>
+
+<p>The new program <font color=red>gateway.c</font> essentially will act as both a server and a client. It is a server for the <em>source</em> and a client for the <em>sink</em> in Problem 1. Thus you will need to set up the program properly. In particular, the <em>gateway</em> would have to use two ports, one as a server port that receives information from the <em>source</em> and one as a client port that sends information to the <em>sink</em>.
+
+<p>Test the programs by running <em>source, sink,</em> and <em>gateway</em> at the same time, either on the same computer or on different computers. Adjust the value of error rate <em>p</em> so that we can actually see some cases where the received message differs from the sent message on the screen where <em>source</em> is running.</p>
+
+
+<p>When you're done with the lab problem, make sure you remove unnecessary files, then submit the work to Gitlab.</p>
+
+<p>Congratulations! You just finished this lab.</p>
+</body>
+</html>

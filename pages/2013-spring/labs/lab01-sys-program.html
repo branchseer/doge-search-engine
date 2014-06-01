@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+<h2>Lab 01: Systems Programming in C</h2>
+
+<h4>Goals</h4>
+<ul>
+    <li> Get started in learning systems programming in C.</li>
+    <li> Learn to work with a few basic Unix system calls.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The material developed for this lab was developed by Prof. L. Felipe Perrone. Permission to reuse this material in parts or in its entirety is granted provided that this "credits" note is not removed. Additional students files associated with this lab, as well as any existing solutions can be provided upon request by e-mail to <em>perrone[at]bucknell[dot]edu</em>. Some very minor changes were made by Xiannong Meng.</p>
+
+<h4>Setup</h4>
+
+<ol>
+    <li>Assume you have set up your <em>Gitlab</em> account, created and shared your <em>csci363-s13</em> project (directory) with the instructor by now. If you haven't done so, please visit the page about <a href = "gitlab-intro.html">Introduction to Gitlab</a> and go through the steps there to set up your <em>Gitlab</em> account.</li>
+
+    <li>Open a terminal window and run the following sequence of commands (the directory "csci363-s13" has been created when setting up <em>Gitlab</em>):</li>
+    <font color=red><b>
+    <ul>
+       <li>cd csci363-s13</li>
+       <li>mkdir labs</li>
+       <li>mkdir labs/lab01</li>
+    </ul>
+    </b></font>
+
+    <li>If you already created an <b>ssh</b> keypair in the regular Linux network, you can skip ahead directly to step 4. From your terminal, open an <b>ssh</b> session to <b>linuxremote.bucknell.edu</b>, authenticate yourself, and then type <font color=red><b>ssh-keygen</b></font> (keep the default location for the key files and choose a passphrase that you can remember easily. Log out from the remote Linux server.</li>
+<!--
+    On your local machine, do the following:
+
+    mkdir .ssh
+    cd .ssh
+
+    Lets copy your ssh key from linuxremote to your local machine. If you change machines in a future lab, remember to repeat this step. There is no networked file system in Dana 132, so you have a separate home directory in each machine.
+
+    sftp linuxremote.eg.bucknell.edu
+    cd .ssh
+    get id_*
+    quit
+-->
+    <li>Now, in your <em>csci363/labs/lab1</em> directory, create a file to contain answers to the questions in this assignment using the command below. 
+
+    <ul>
+       <li><font color=red><b>touch csci363/labs/lab1/answers.txt</b></font>
+    </ul>
+<p>After running this line in your shell, open the file in a text editor and write down the lab information including lab number, your name, and the date of the lab. This is <b>Part 1.1</b> of the answers.</p>
+
+    <li> Copy the files for this lab to your Lab1 directory
+    <ul>
+       <li><font color=red><b>cp ~cs363/Spring13/student/labs/lab01/* .
+</b></font>
+<br>Note there is a space and a dot '.' at the end of the command.</li>
+    </ul>
+
+<!--
+    Copy the files for this lab to your Lab1 directory
+
+    cd csci363/Labs/Labs/Lab1
+    sftp linuxremote1.eg.bucknell.edu
+    cd /home/accounts/COURSES/cs363/Spring12/Labs/Lab1
+    mget *
+    quit
+-->
+</ol>
+
+<h4>Problem 1: Using C File I/O</h4>
+
+<p>Consider the C programs in files <em>file-test.c</em> and <em>read-test.c</em>. You will be asked to read the source code, compile and execute the programs, and try to understand what is happening. 
+
+<p>In this problem you need to:</p>
+
+<ol>
+    <li> Read the programs <em>file-test.c</em> and <em>read-test.c</em>. If you haven't read about the Unix system calls below yet, read the description of each one in the appropriate <em>man</em> pages while reading the programs:</li>
+       <ul>
+	 <li>open(2), fopen(3)</li>
+	 <li>close(2), fclose(3)</li>
+	 <li>read(2), fread(3)</li>
+	 <li>write(2), fwrite(3)</li>
+	 <li>perror(3)</li>
+       </ul>
+
+    <li> Compile, excute the programs, and observe the results.</li>
+       <font color = red><b>
+       <ul>
+	   <li>make</li>
+           <li>./file-test</li>
+           <li>./read-test myfile</li>
+           <li>./read-test input-file</li>
+       </ul>
+       </b></font>
+
+    <p> Th program <b>file-test</b> creates a data file called <em>myfile</em>. Read the source code and understand the data (<em>myfile</em>) generated by the program. Next, inspect the hex dump of myfile running <font color=red><b>xxd myfile</b></font>. Write your answer to the question in <b>answers.txt: (1.2)</b> <em>Do the file contents shown by <b>xxd</b> command match the data that <b>file-test</b> created?</em></p>
+
+    <p>Inspect the results produced by <b>./read-test myfile</b> and <b>./read-test input-file</b>. Write your answer to the question in <b>answers.txt: (1.3)</b> <em>If you are told that both files contain the same data, how do you explain the fact that you get very different results running <b>read-test</b> on the two data files?</em>
+
+    <li> Modify <em>read-test.c</em> to validate its inputs, check all return codes from system calls, and print appropriate error messages when necessary. Specifically, you need to check:</li>
+
+<em>
+          <p> a. if the input argument is given (e.g. try to run the program without the required argument);</p>
+          <p> b. if the file has been opened successfully (e.g. try to run the program with a wrong file name);</p>
+          <p> c. if the number of bytes actually read from the file is equal to the number of bytes you wanted to read from the file.</p>
+</em>
+
+<p>If an error condition is found, indicate to the user what happened by printing the appropriate error message. Use <b>perror</b> in the case of a system error (item b), or use <b>printf</b> otherwise (items a and c).</p>
+
+<p>Write your answers to the question in <b>answers.txt (1.4)</b> <em>If you modify the two programs above to use C streams, that is, <b>FILE*</b> instead of low-level file descriptors, will this modification allow you to see identical output from read-test for both input files? </em> Note: You don't have to rewrite your program to use C streams to verify the facts; instead, thinking a little bit about the reasons for the phenomenon would give you the answer.</p>
+</ol>
+
+<b>Deliverables: </b>
+  <ul>
+    <li> Your modified <em>read-test.c</em>.</li>
+    <li> Answers to questions (1.2), (1.3), and (1.4) in <b>answers.txt</b>.</li>
+   </ul>
+
+<p><b>Add and commit to Git</b></p>
+
+<p>Execute the following commands to save your two files to Git, assuming you are currently in the directory of <em>csci363-s13/labs/lab01</em>.</p>
+
+<font color = red><b>
+   <ul>
+      <li> git add answers.txt </li>
+      <li> git add read-test.c </li>
+      <li> git commit -m "Lab 1 Problem 1"</li>
+   </ul>
+</b></font>
+
+<h4>Problem 2: Unix Processes, Pipes, and Timers</h4>
+
+<p>Consider the C program in file <em>fork-test.c</em>. Read the source code, compile, and run the program. Try to understand what the program does and how each of the system calls works. If you havent read about the Unix system calls below yet, look at each ones description in the appropriate man pages:</p>
+   <ul>
+      <li>fork(2)</li>
+      <li>pipe(2)</li>
+      <li>close(2)</li>
+      <li>sleep(3)</li>
+      <li>sigaction(2)</li>
+      <li>setitimer(2)</li>
+    </ul>
+
+<p>Copy <em>fork-test.c</em> into a new file called <em>two-way.c</em> and modify your new file according to the specifications below:</p>
+<ul>
+    <li>The program must have two processes called <em>One</em> and <em>Two</em>, respectively similar to the originals <em>source</em> and <em>sink</em>.</li>
+
+    <li> Process <em>One</em> can send messages to process <em>Two</em>. and vice-versa. Since pipes are unidirectional, you will need to set up one more pipe for each process so that both processes can send messages to the other.</li>
+
+    <li> Process <em>One</em> alternates between sending one of two different messages to process <em>Two</em>. The message is always sent one byte at a time. Note that the message is a C-string, that is, a null-terminated array of characters; the null byte is sent on the pipe and used by the receiver to detect where the message ends. The total number of bytes sent is the length of the message plus one (the null byte).</li>
+
+    <li> Process <em>Two</em> prints the time of day when the message is received in full. After this, it sends back to process <em>One</em> the message of three characters "ack" for acknoledgement, one byte at a time (again remember that the message is a C-string, that is, a null-terminated array of characters). Also note that the message consists of three characters without the quotes.</li>
+
+    <li> Process <em>One</em> waits for the response message from process <em>Two</em> to arrive in full, and checks if the text it contains is really "ack". If that is the case, then process <em>One</em> will transmit an alternate message, otherwise it will retransmit the current message. After processing the response message from process <em>Two</em>, process <em>One</em> must wait 0.5 second before transmitting another message. Note that this wait time cannot be achieved with the <b>sleep</b> library call, so you have to use some other mechanism to count times less than 1 second. You'd have to use Linux signal and signal handling to solve this problem. The basic idea is that the process starts a timer when receiving the response message. The process then uses the system call <b>pause</b> to suspend itself. When the previously started timer goes off, a signal is sent to the calling process, i.e., process <em>One</em>, that started the timer. If a timer handler function is defined, the process wakes up and continues. You are asked to read the manual page and use web resources to find out how to set and use this delay mechanism properly.</li>
+</ul>
+
+<b>Deliverables:</b>
+
+<p>A new program called <em>two-way.c</em> which meets the specifications above.</p>
+
+<p>Execute the following commands to save your program to Git, assuming you are currently in the directory of <em>csci363-s13/labs/lab01</em>.</p>
+
+<font color = red><b>
+   <ul>
+      <li> git add two-way.c </li>
+      <li> git commit -m "Lab 1 Problem 2"</li>
+      <li> git push</li>
+   </ul>
+</b></font>
+
+<p><b>Extra-credit:</b> Once you have completed the lab assignment, a nice addition to <b>two-way.c</b> would be to have process <em>One</em> print to the screen the time elapsed between sending out the first byte of a message and receiving the last byte in the response sent back from process <em>Two</em>. To accomplish this, you will want to look at the following man pages:</p>
+<ul>
+    <li>gettimeofday(2)</li>
+    <li>ctime(3)</li>
+</ul>
+
+<p>If you complete any of the extra credit work, make sure commit and push them to the Gitlab server.</p>
+
+<h4>Submission</h4>
+
+<p>In this course, you will submit all your work via a <b>Git</b> repository.</p>
+
+<p>Remember that the due date for this lab is the starting time of the next lab session.</p>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 04: Experiment with UDP, Passing Structured Data across Networks</h2>
+
+<h4>Goals</h4>
+
+<ul>
+  <li> <font color=red><b>Start developing an understanding of UDP performance:</b></font> We have been using TCP for communication between client and server applications. TCP and UDP have very different characteristics. We will explore how UDP works in this lab.</li>
+  
+  <li> <font color=red><b>Experiment passing structured data across networks:</b></font> We have so far passed plain text such as a string over the network. In this lab, we will explore how to send and receive information that is structured, such as a linked list of nodes.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The material developed for this lab was developed by Prof. Felipe Perrone (Bucknell University). Some of this lab is based on material from <em>Unix Network Programming</em> Volume 1, by W. Richard Stevens, Bill Fenner, and Andrew M. Rudoff (Addison Wesley, 2004).</p>
+
+<p>Permission to reuse this material in parts or in its entirety is granted provided that the credits note is not removed. Additional students files associated with this lab, as well as any existing solutions can be provided upon request by e-mail to <em>perrone[at]bucknell[dot]edu</em>.</p>
+
+<h4>Introduction</h4>
+
+<p>TCP and UDP are two major transport protocols that are in use. We have worked with TCP measurement in our last lab. So far we have only used UDP once, in a small application. It's time to develop a better understanding of UDP and of how it compares to TCP. This lab will have you use UDP to rebuild the tools you developed earlier for TCP for performance analysis. This experience will help you put in perspective the differences between these two transport protocols, in terms of use at the API level and in terms of the performance characteristics of each one.</p>
+
+<p>The second component of the lab is to experiment with the nature and the mechanism needed to send binary files across the internet. In the past labs and exercises, we have learned how to send character strings across different computers. Sending binary data in principle is no difference than sending strings of characters. However some detailed technical issues have to be resolved. For example, if one wants to send a linked list of nodes to a different computer. How do we do that? What does an address on one computer mean to another computer, sometimes in completely different architecture? If the length of the linked lists or the size of the nodes in the linked list is unknown ahead of time, how do we deal with that? These are some of the questions we would like to explore in this lab.</p>
+
+<h4>Setup</h4>
+
+<p>Create a directory in your local git repository called <b>lab04</b>, as in</p>
+
+<code>~/csci363-s13/labs/lab04</code>
+
+<p>Copy all files from <code>~cs363/Spring13/student/labs/lab04/</code> to your own lab directory. You should see two files, <code>list.h</code> and <code>list.c</code> that implements a basic linked list. You don't have to use these files if you have your own linked list implementation.</p>
+
+<h4>Problem 1: The <b><font color=red>pingpong</font></b> application</h4>
+
+<p>In this problem, you will create two programs called <font color=red>pingpong.c</font> and <font color=red>reflectord.c</font>, which communicate with each other using UDP datagrams. The general idea is that <b>pingpong</b> will create a message of a given length, transmit it to <b>reflectord</b>, which sends the same message right back to <b>pingpong</b>.</p>
+
+<p>A pair of simple UDP programs (client/server) is available at <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/code/socket/">the code example segment</a> of the course website, which you might find useful.</p>
+
+<p><b>(A)</b> You will need to instrument <b>pingpong</b> to send a number of messages of a given size to <b>reflectord</b> and wait for it to come back.</p>
+
+<p>UDP is a connectionless protocol, so you won't have to measure the overhead in establishing or tearing down connections (which you did for TCP).</p>
+
+<p><font color=red><u>For each message:</u></font></p>
+<ul>
+   <li>Measure the <em>round trip time</em> (RTT) for a UDP datagram.</li>
+</ul>
+
+<p>These time measurements can be obtained from placing calls to <b>gettimeofday(3)</b> in strategic places in your program. If you take these samples for each message sent from <b>pingpong</b> to <b>reflectord</b>, at the end of <b>pingpong</b>'s execution you will report following value:</p>
+<ul>
+   <li>The average RTT for the message.</li>
+</ul>
+
+<p>The command line for <b>pingpong</b> should be as follows:</p>
+
+<p><b><font color=red>pingpong</font> [num_msgs]  [msg_length]  [host]  [port]</b></p>
+
+<p>where:</p>
+<ul>
+    <li> <b>num_msgs</b> is the number of messages</li>
+    <li> <b>msg_length</b> is the length in bytes of a message sent out by this program and returned by <b>reflectord</b>.</li>
+    <li> <b>host</b> is the symbolic name of a machine accessible from your network where <p>reflectord</b> is running, and</li>
+    <li> <b>port</b> is the port number where the <b>reflectord</b> is listening.</li>
+</ul>
+
+<p>Running from a shell should look like:</p>
+<p><font color=red><b>$ pingpong 50 10000 machine.eg.bucknell.edu</b><br>
+One or more parameters missing.<br>
+Usage: pingpong [num_msgs] [msg_length] [host] [port]<br>
+<b>$ pingpong 50 10000 machine.eg.bucknell.edu 9010</b><br>
+0.034</font></p>
+
+<p>In this example, 0.034 represents average the time to send and get back a message of 10,000 bytes.</p>
+
+<p><b>(B)</b> Your second program, <b>reflectord</b>, will be a daemon, that is, a server listening on a well known port and running in an infinite loop. This program should be very simple: wait for a connection request, establish the connection, listen for an incoming message, return the identical message to the sender, and go back to waiting for the next message.</p>
+
+<p>The command line for <b>reflectord</b> should be as follows:</p>
+
+<p><font color = red><b>reflectord</b> port</font></p>
+
+<p>where:</p>
+
+<p><b>port</b> is the port number where <b>reflectord</b> is listening.</p>
+
+<p>Create a <b>Makefile</b> for compiling your two programs. Also, make sure to use your evolving files <b>wrappers.h</b> and <b>wrappers.c</b>, and to augment them if you use any new system or library calls that you could wrap.</p>
+
+<p>Run the client and server program with different message size (e.g., 100, 1000, 10000, ...)</p>
+
+<p>Create a text file called <b>answers.txt</b>. In this file:</p>
+
+<p><b>(A)</b> Is there a limit to the size of the UDP datagram that you can send from <b>pingpong</b>? Use your best sources to investigate this question, experiment with your programs to verify whether your findings in the literature are accurate, and document in the answer to this question what you have learned/observed.</p>
+
+<p><b>(B)</b> Describe the data that your modified <b>pingpong.c</b> produces. You should be thinking of how to explain to someone who will never read your source code the interpretation of the numbers that the program produces.</p>
+
+<p><b>(C)</b> How are the time measurements you see here compared to what you had in the last lab with the similar program implemented in TCP?</p>
+
+<p>When you're done with this problem, you need to do:</p>
+
+<font color = red><b>
+<ul>
+  <li> git add lab05</li>
+  <li> git commit -m Lab 5, problem 1 completed</li>
+  <li> git push</li>
+</ul>
+</b></font>
+<p>which should add a list of files to the git repository, including <code>wrappers.h, wrappers.c, Makefile, pingpong.c, reflectord.c,</code> and <code>answers.txt</code>.</p>
+
+
+<h4>Problem 2: Sending structured data over the network</h4>
+
+<p>In the past exercises, we have learned how to send character strings among network applications. A typical application scenario in which a sender sends a string of characters pointed by the variable <code>buf</code> to a receiver looks as follows.</p>
+
+<p>On the sender side:</p>
+
+<p>
+<code>char * buf = "hello world!"</code><br>
+<code>size_sent = write(s, buf, strlen(buf));</code>
+</p>
+
+<p>On the receiver side:</p>
+
+<p>
+<code>char * buf = (char*)malloc(MAXSIZE+1); // don't know the size ahead of time</code><br>
+<code>size_read = read(s, buf, MAXSIZE);</code><br>
+<code>buf[size_read] = 0; // terminate the string</code>
+</p>
+
+<p>Now consider how we might send structured data that are not simply string of characters! For example, if a structure which can be used in a linked list is defined as follows.</p>
+
+<textarea rows = "8" cols = "80">
+struct node_t {
+    int    len;
+    char   words[256];
+    double rate;
+    struct node_t * next; 
+}
+</textarea>
+
+<p>If your program has a collection of data of the <code>struct node_t</code> type, how do you send such a collection of data from a sender to a receiver? In this part of the lab, we will exercise on this topic.</p>
+
+<p>In your <b>answers.txt</b> write the appropriate answers to questions below (not all need a text answer, as some will be programming.) You are asked to accomplish the following tasks, one at a time.</p>
+
+<ol>
+  <li> Use the <code>sizeof</code> operator to find out how many bytes of memory a structure defined above occupies. Explain why the structure takes this many bytes.</li>
+
+  <li>Copy the TCP client/server program you had from last lab (<b>pingpong.c</b> and <b>reflectord.c</b>). Rename <b>pingpong.c</b> as <b>list-sender.c</b>, <b>reflectord.c</b> as <b>list-receiver.c</b>. Revise the programs so that the client is able to send one structure to the server and the server is able to retrieve the values in the structure by printing them on the screen. In your <b>answers.txt</b> briefly explain how your program works to accomplish this task (a few sentences suffice.)</li>
+
+   <li>Revise the program so that the client can send a linked list of structures to the server and the server is able to retrieve the data and print them on the screen. In your <b>answers.txt</b> briefly explain how your program works to accomplish this task (a few sentences suffice.)</li>
+
+   <li>Revise the program so that the receiver uses a generic buffer to store the data first, then recovers the structured data back into a linked list.</li>
+</ol>
+
+<p>First consider how to send one such piece of structure to a remote computer. Assume we are using TCP (UDP programming would be very similar), and you have established a connection between the sender and receiver properly. The general idea is that the sender will send a collection of memory bytes representing the data to the receiver. This collection of memory bytes starts with the memory location where the variable resides and the length of this collection is the size of the structure.</p>
+
+<p>The key to solve this problem is to access the correct memory location where the data is stored. There are two possible ways to access the address of a variable. One is to use the <em>address of</em> operator ("&amp;") to get the address of a variable; the second is to directly use the address of a variable assigned when using <code>malloc()</code> or <code>calloc()</code> calls. The following code segment illustrates the concept.</p>
+
+<textarea rows = "15" cols = "80">
+struct node_t node;
+struct node_t * nodeptr;
+int size_sent;
+
+/* assume network connection has established through socket s */
+/* the client is sending a node to the receiver */
+size_sent = write(s, &node, ...); // the third parameter is the size
+
+/* or we could use memory address directly */
+nodeptr = (struct node_t *)malloc( ... );  // size needs to be filled
+/* content of the node is filled here */
+/* now send the node */
+size_sent = write(s, nodeptr, ...); // the third parameter is the size */
+</textarea>
+
+<p>The receiver side can simply read the data into a properly defined variable of the same type.</p>
+
+<p>How do we send a linked list of such nodes? The approach is to have the client traverse through the linked list from beginning to end, sending one node at a time to the server. Since we don't know the number of nodes in a linked list ahead of time, the server (receiver) side would have to loop on the condition that if more data is coming, the loop continues.</p>
+
+<p>An alternative way to send or receive structured data is to store the received data in a generic buffer. When all is received, the receiver can recover the structured the data from the generic buffer. Try the following. On the client side, send one structured node as it was in the previous step. On the server side, instead of reading the data into the structured variable, define a generic buffer <code>char * buf;</code>, allocate a maximum amount of memory to it, e.g., define and use a constant <code>BUFFSIZE</code> of 4096 bytes. Once the data is read into the generic buffer, it can be casted as a piece of structured data as follows.</p>
+
+<textarea rows = "15" cols = "80">
+struct node_t * anode;
+int total_count = 0;
+char * buf = (char*)malloc(BUFFSIZE);
+int size_read = read(s, buf, BUFFSIZE);
+anode = (struct node_t *)buf;
+printf("length : %d\n", anode->len);
+printf("words : %s\n", anode->words);
+printf("rate : %f\n", anode->rate);
+total_count += size_read;
+
+/* if more data is to be read from the sender, one can continue use */
+/* the buffer from where it is left in last read */
+size_read = read(s, &(buf[total_count]), BUFFSIZE);
+</textarea>
+
+<p>In your <b>answers.txt</b> explain how the last C statement works, in particular, what the phrase <code>&(buf[total_count])</code> mean.</p>
+
+<p>Now that you have a basic understanding how to pass structured data across the network, complete the lab exercises so that the client sends a linked list of structured data to the server. The server stores the received data in a generic buffer first, then recovers the linked list and prints out the contents.</p>
+
+<p>Just for fun, you may consider sending the following Confucious quotes from one computer to another using the structure defined earlier in this lab. The variable <code>len</code> can be changed to <code>count</code> as an index, the variable <code>rate</code> can be used to indicate a ranking. You don't have to use these quotes. Feel free to use any other you see fit. The exact meanings of these variables are not critical. The key is to pass a linked list of nodes, where each node contains a string (a quote), an integer, and a double.</p>
+
+<p><b>Note</b> that although the following example asks you send five nodes only, your program should be able to handle arbitrary number of nodes.</p>
+
+<textarea rows = "8" cols = "120">
+  "If you think in terms of a year, plant a seed; if in terms of ten years, plant trees; if in terms of 100 years, teach the people."
+  "No matter how busy you may think you are, you must find time for reading, or surrender yourself to self-chosen ignorance."
+  "Do not impose on others what you yourself do not desire."
+  "Our greatest glory is not in never falling, but in rising every time we fall."
+  "Wisdom, compassion, and courage are the three universally recognized moral qualities of human beings."
+</textarea>
+
+<p>Submit <b>list-sender.c</b>, <b>list-receiver.c</b>, and updated <b>answers.txt</b> to your gitlab.</p>
+
+<p><b><font color = red>Extra credit:</font></b> If you have time left, consider revising your program so that the program can handle strings of variable length. Note that the current program uses a structure that contains a fixed length (256) string. What do you need to do if the string length is not fixed? Try to have the receiver still use a generic buffer. Submit the finished programs using different pair of names <b>list-sender-var.c</b> and <b>list-receiver-var.c</b>.</p>
+
+<p>Congratulations, you've finished this lab!</p>
+
+</body>
+</html>

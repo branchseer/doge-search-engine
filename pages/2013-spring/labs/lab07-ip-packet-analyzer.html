@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 07: Building a Packet Analyzer for IP Traffic</h2>
+
+<h4>Goals</h4>
+
+<ul>
+  <li> <font color=red>Learn to parse the information in packet traces:</font> In this lab you will continue the work started last week. You previously mined a packet trace only for Ethernet frame headers with Layer 2 information. This time you will learn to continues to analyze further information such as IP, TCP, and UDP from the trace data.</li>
+
+   <li> <font color=red>Become familiar with the protocol headers and data units from several protocols:</font> Starting from a skeleton that can parse the information in an IP packet, you can build a program that understands the headers of protocols like UDP and TCP. In the process of constructing this application, you will learn the header format of these protocols and gain understanding of how the protocols accomplish their goals.</li>
+
+   <li> <font color=red>Learn to read protocol specification documents (RFCs):</font> These documents contain the most authoritative information one can find on Internet standards and Internet protocols. You should spend some time in this lab period researching a few RFCs and getting familiar with the style and the content of the documents associated with protocols you already understand well.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The material for this lab was created by Prof. L. Felipe Perrone based on previous work by Prof. Xiannong Meng (Bucknell University). Permission to reuse this material in parts or in its entirety is granted provided that the credits note is not removed. Additional students files associated with this lab, as well as any existing solutions, can be provided upon request by e-mail to <em>perrone[at]bucknell[dot]edu</em>.</p>
+
+<h4>Introduction</h4>
+
+<p>You successfully parsed out the Ethernet frames within a trace data file in your last lab. Review <a href = "labs/lab06-process-ether-traffic.html">the <em>Processing Captured Network Traffic</em> lab</a> if necessary. An Ethernet frame looks as follows.</p>
+
+<center>
+<p><img src = "labs/ether-300x56.png" alt = "Ethernet frame format"><br>
+Figure: Ethernet Frame Format</p>
+</center>
+
+<p>If the <em>Type</em> field has the value of 0x0800, then the <em>payload</em> of the Ethernet frame contains an IP packet, whose header looks as follows.</p>
+
+<center>
+<p><img src = "labs/ip-pkt-header.jpg" alt = "IP Packet Header"><br>
+Figure: IP Packet Format</p>
+</center>
+
+<p>In your last lab, you printed the source and destination IP addresses. In this lab, you will extract further information from an IP packet. Specifically, you are to extract various pieces of information from TCP and UDP packets.</p>
+
+<p>Within an IP packet, the <em>protocol</em> field specifies the type of the current IP packet. If the value is 6, the transport layer protocol is TCP; if the value is 17, the transport layer protocol is UDP. There are other types of transport protocols, we are primarily interested in TCP and UDP in this lab. Given this layered structure, you are asked to extract transport layer information from the trace data once an IP packet is encountered. The general strategy is to read the trace data as you did in your last lab; analyze each Ethernet frame; extract IP and transport layer protocol information; if the transport layer is either UDP or TCP, further dissect the packet to print the detailed information about these two protocols in the packet. The packet formats for UDP and TCP are listed as follows.</p>
+
+<center>
+<p><img src = "labs/tcp-packet.jpg" alt = "TCP Packet Header"><br>
+Figure: TCP Packet Format</p>
+</center>
+
+<center>
+<p><img src = "labs/udp-packet.jpg" alt = "UDP Packet Header"><br>
+Figure: UDP Packet Format</p>
+</center>
+
+<p>While the above figures should help you understand the structure of the packets, the actual header files and the names of the fields are needed for programming. These files can be found on the Linux system at the following locations.</p>
+<code>
+/usr/include/netinet/ip.h<br>
+/usr/include/netinet/tcp.h<br>
+/usr/include/netinet/udp.h<br>
+</code>
+
+<h4>Your work</h4>
+
+<p>You are given a program skeleton that outline the tasks for you. Part of the program has been completed. Your task is to finish the remaining part of the program so that the program is able to parse out the TCP and UDP packets in the trace file.</p>
+
+<p>First copy all the files from the course directory to your local Git repository.</p>
+
+<font color=red><b>
+<p>cp -r ~cs363/Spring13/student/labs/lab07 .</p>
+</b></font>
+
+<p>You should receive a set of 10 files. Glance over the files <code>etherTrace.c, etherTrace.h,</code> and <code>prot_strings.c</code> to see what these programs do. You should concentrate on <code>etherTrace.c</code> once you have a basic understanding of what <code>etherTrace.c</code> and <code>prot_strings.c</code> do. Make sure you know what each function does in <code>etherTrace.c</code>. The file <code>solution-dec21.txt</code> is a sample output of a completed program. Your result should be similar to that file, though you may change the presentation format if you want to. your tasks include the following.</p>
+
+<ul>
+  <li> Complete the <code>while</code> loop in the <code>main()</code> function. Basically you need to align the pointer (address) with the data buffer for TCP and UDP packet.</li>
+
+  <li> Complete the function <code>parse_ip_header()</code>, which you have done in last lab.</li>
+
+  <li> Complete the function <code>parse_rec_header()</code>, which you have done in last lab.</li>
+
+  <li> Complete the function <code>parse_udp_header()</code></li>
+ 
+  <li> Complete the function <code>parse_tcp_header()</code></li>
+
+  <li> Compile and run your program. The result should be similar to the file <code>solution-dec21.txt</code></li>
+
+  <li> Save a copy of your output by redirecting the screen output to a text file<br>
+<b><font color=red>./etherTrace dec21.dat > lab07-out.txt</font></b></li>
+
+  <li> When your program works fine, you can try your program using many other trace files generated by the textbook authors. A local copy of these trace files are at<br>
+<code>~cs363/traces/</code><br>
+Try, for example,<br>
+<b><font color=red>./etherTrace ~cs363/traces/http-ethereal-trace-1</font></b></li>
+
+</ul>
+
+<p>When all completed, please submit and commit the entire lab07 directory to your Gitlab repository by the deadline.</p>
+
+<p>Congratulations, you have just finished lab 07!</p>
+
+</body>
+</html>

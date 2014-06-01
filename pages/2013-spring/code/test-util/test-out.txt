@@ -1,0 +1,110 @@
+testing list ...
+pais v[0] = hello
+pais v[1] = world
+pais v[2] = how
+pais v[3] = are
+pais v[4] = you
+working with 0
+working with 1
+working with 2
+working with 3
+working with 4
+get [0] = hello
+get [1] = world
+get [2] = how
+get [3] = are
+get [4] = you
+list should contain (world/b), the result is 16199984
+list should not contain bnode, the result is 0
+the first node should be the same in both, the result is 1
+the list that combines the two ...
+node value : (a), (hello), (-1)
+node value : (b), (world), (-1)
+node value : (c), (how), (-1)
+node value : (d), (are), (-1)
+node value : (e), (you), (-1)
+node value : (a), (hello), (-1)
+node value : (b), (world), (-1)
+node value : (c), (how), (-1)
+node value : (d), (are), (-1)
+node value : (e), (you), (-1)
+testing list2D ...
+working with 0
+working with 1
+working with 2
+working with 3
+working with 4
+make second list a part of the first list ...
+the result of connecting the 2D list ...
+work->var a ----- 
+var/val pairs ...
+[a|-|hello] [b|-|world] [c|-|how] [d|-|are] [e|-|you] 
+work->var b ----- 
+var/val pairs ...
+[a|-|hello] [b|-|world] [c|-|how] [d|-|are] [e|-|you] 
+work->var c ----- 
+var/val pairs ...
+[a|-|hello] [b|-|world] [c|-|how] [d|-|are] [e|-|you] 
+work->var d ----- 
+var/val pairs ...
+[a|-|hello] [b|-|world] [c|-|how] [d|-|are] [e|-|you] 
+work->var e ----- 
+var/val pairs ...
+[a|-|hello] [b|-|world] [c|-|how] [d|-|are] [e|-|you] 
+var/val pairs ...
+[Hello|-|Hello] [Other|-|Other] [cases|-|cases] [World|-|World] [123how|-|123how] [are|-|are] [you|-|you] 
+original string[Hello    
+ Other cases! World, 123how , are you?]
+converted string[hello    
+ other cases! world, 123how , are you?]
+testing findStrLoc()...
+findStrLoc('Other') should return 11, the result is 11
+findStrLoc('NNN') should return -1, the result is -1
+test removeExtraSpace ...
+Hello Other cases! World, 123how , are you?
+test str_trim() ...
++++abc hello world!++
+end with html (true) 1
+end with exe (true) 1
+end with php (true) 1
+end with html (false) 0
+original |http://some//moreslash/| removed |http://some/moreslash/|
+original |http://normal.com/index.html| removed |http://normal.com/index.html|
+original |..//hello.world/a//////b././| removed |../hello.world/a/b././|
+original |nothing/domain/normal| removed |nothing/domain/normal|
+ original page...
+<html><body>some text <a href  = "http://www.eg.bucknell.edu/testpages/grading.html">anchor text</a> more text</body></html>
+ original page...
+<html><body>some text <a href  = "http://cnn.com//testpages/grading.html#abc">anchor text</a> more text  <a href =     "../hello.html">second </a> new text</body></html>
+var/val pairs ...
+[www.eg.bucknell.edu|-|/testpages/grading.html] [cnn.com|-|/testpages/grading.html] [www.bucknell.edu|-|/hello.html] 
+original url: ++../testpages/level1/level2/../level3/grading.html++
+base url :  ++http://www.bucknell.edu/home/dir/level3/file.html++
+fixed url : ++http://www.bucknell.edu/home/dir/testpages/level1/level3/grading.html++
+string len 69
+var/val pairs ...
+[www.eg.bucknell.edu|-|/~csci203//] [www.eg.bucknell.edu|-|/~csci204] [www.eg.bucknell.edu|-|/~cs206//] [www.eg.bucknell.edu|-|/~cs315//] [www.eg.bucknell.edu|-|/~csci335//] [www.bucknell.edu|-|/Course/web-ir/index.html] [www.eg.bucknell.edu|-|/~cs363] [www.eg.bucknell.edu|-|/~xmeng/Course/CS379//] [www.eg.bucknell.edu|-|/~cs475//] [www.eg.bucknell.edu|-|/~cs479//] [www.eg.bucknell.edu|-|/~xmeng/Course/EG100//] [www.eg.bucknell.edu|-|/~engr138//] [www.eg.bucknell.edu|-|/~engr139//] [www.bucknell.edu|-|/x64771.xml] [www.bucknell.edu|-|/china-2012//] [www.eg.bucknell.edu|-|/~found-cs//] [www.bucknell.edu|-|/utpa-teaching.html] [www.bucknell.edu|-|/python-info.html] 
+/~csci203//
+/~csci204
+/~cs206//
+/~cs315//
+/~csci335//
+/Course/web-ir/index.html
+/~cs363
+/~xmeng/Course/CS379//
+/~cs475//
+/~cs479//
+/~xmeng/Course/EG100//
+/~engr138//
+/~engr139//
+/x64771.xml
+/china-2012//
+/~found-cs//
+/utpa-teaching.html
+/python-info.html
+a total of 18 urls found.
+prot |http|
+host |www.cnn.com|
+path |/l1/l2/../l3/./|
+file |file.name|
+port |567|

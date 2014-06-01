@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 09: Working with CRC</h2>
+
+<h4>Goals</h4>
+
+<ul>
+   <li> <font color=red><b>Checking errors using CRC:</b></font> In this lab, you will learn how to use CRC (<em>Cyclic Redundancy Check</em>) to examine if the data received contains any errors.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The materials in this lab come from various sources, including textbooks and websites. A partial list of textbooks that contribute to the ideas in the lab include our textbook <em>Computer Networking: A top-down approach</em> by Kurose and Ross, <em>Computer Networks</em> by Tanenbaum, and <em>Computer Networks</em> by Peterson and Davie. The code for CRC Model comes from <a href = "http://www.ross.net/crc/crcpaper.html">the paper and discussion</a> by Ross Williams on the subject.</p>
+
+<h4>Checking for Errors in Transmitted Data</h4>
+
+<p>In our last week's lab, we used a client (<em>source</em>) program to send a piece of data to a gateway before reaching the final receiver (<em>sink</em>). The sink in turn sends back the data to the source. The gateway could randomly alter the data so that the data sent from the source may be different when the source receives back from the sink. The lab assignment asked the source to check if the data received from the sink is the same as the one sent out.</p>
+
+<p>In a real world application, a sender typically can't ask the receiver to send back the data to check to see if the data was sent correctly. Rather it is the responsibility of the receiver to check for data integrity. One possible, and effective mechanism is to use a checksum to examine to see if the data received contains errors or not.</p>
+
+<p>The basic idea of a checksum is for the sender to compute a checksum value using certain algorithms. The checksum is then sent along with the data. When receiving the data along with the checksum, the receiver performs a checksum computation to see if the data has been altered. The simplest mechanism is a parity check, one that computes the number of one bit (or zero bit), the checksum bit is then added to the data to make either an odd parity or even parity check. A more elaborate and effective checksum mechanism is <em>Cyclic Redundancy Checksum</em> which is based on some algebra theory. That is, if the remainder R(x) results from D(x)/G(x), where D(x) is an <em>n</em> bit data, G(x) is an <em>r+1</em> bit generating function, and R(x) is an <em>r</em> bit sequence, then the data sequence D(x) with R(x) attached to the end, effectively S(x) = D(x)*2^r+R(x) will be received by the receiver. When the receiver performs the same division operation S(x)/G(x), the remainder should be 0. If the remainder is not a zero, the data received contains error(s).</p>
+
+<h4>CRC Checksum Computation</h4>
+
+<p>While the basic idea of CRC as a checksum is not very complicated, the implementation of CRC in any programming language does involve many engineering challenges, mainly because CRC may not always be at the boundary of a byte and the fact that one has to shift through each bit of the data to compute CRC. You will find many CRC computation related discussions and solutions on the web. Here we will use one of the <a href = "http://www.ross.net/crc/crcpaper.html">well-known solution</a> by Ross Williams.</p>
+
+<h4>Your Tasks</h4>
+
+<p>In last week's lab, you created programs <font color=red>source.c, sink.c</font> and <font color=red>gateway.c</font>. In this lab, you will revise the programs so that the source sends a message of certain length with a CRC to the gateway, which in turn forwards data to the sink. The sink will be responsible for checking the errors in the message using CRC. The gateway can randomly alter the message with certain probability (just like we did in last lab.) If the sink finds that the message is in error by computing the checksum, the sink simply reports the problem to its screen (i.e., no error correction or retransmission is involved in this lab.)</p>
+
+<p><em>We list the tasks as multiple problems to help you solve the problem in pieces. You could do it in one step if you feel comfortable about your solution.</em></p>
+
+<h4>Set up</h4>
+
+<p>Copy all files from <code>~cs363/Spring13/student/labs/lab09/*</code> You should see a set of six files. The use of these files will become clear as you work through the lab.</p>
+
+<h4>Problem 1: Revise the source/gateway/sink programs</h4>
+
+<p>Rewrite the trio <font color=red>source.c, gateway.c</font> and <font color = red>sink.c</font> so that the message is sent from the source to the sink, via the gateway. The sink doesn't need to echo back the message.</p>
+
+<p>The invocation of the programs may look as follows.</p>
+<ul>
+   <li> <font color=red>source.c</font> -- sends a message of arbitrary, but valid length to a recipient.<br>
+<b>source [gateway host name] [port number] [message length]</b>, where
+    <ul>
+      <li> <em>gateway host name</em> is the symbolic name of the host where the gateway resides.</li>
+      <li> <em>port number</em> indicates the port where the receiver expects to receive datagrams.</li>
+      <li> <em>message length</em> is the length of the message to send.</li>
+   </ul>
+</li>
+
+   <li> <font color=red>gateway.c</font> -- receives a message from the source and forwards it to the sink. The gateway randomly alters a byte in the message with a given probability (e.g., 10 percent, or 0.1.) <br>
+<b>gateway [gateway port number] [sink host] [sink port number]</b>, where
+    <ul>
+      <li> <em>gateway port number</em> is the port number at which the gateway waits for client messages.</li>
+      <li> <em>sink host</em> is the symbolic name of the sink host.</li>
+      <li> <em>sink port number</em> is the port number at which the sink waits for messages from the gateway.</li>
+    </ul>
+
+   <li> <font color=red>sink.c</font> -- receives a message from the gateway and prints the length of the message.<br>
+<b>sink [port number]</b> where
+<em>port number</em> indicates the port where the receiver expects to receive data.</li>
+
+</ul>
+<p>In this part of the lab, no error checking is used, though you could have the sink to print the message, or the length of the message, or both to indicate the programs are working fine.</p>
+
+<h4>Problem 2: Reading and sending file contents</h4>
+
+<p>Revise the <em>source.c</em> so that instead of just creating a message of certain length, the source opens a file from the name given at the command line using the system call <em>open</em> and send the content of the file to the gateway. The general strategy is as follows.<br>
+   <ul>
+     <li> Open the file using the system call <em>open</em></li>
+
+     <li> Check the file length by using the system call <em>fstat</em>. The system call <em>fstat</em> reads the file information including the length of the file into a <em>struct stat</em> structure. Read manual page for <em>fstat</em> to find out the structure of the file stats and how to extract the length of the file from that structure.</li>
+
+     <li> If the file length is larger than the allowed value by UDP, print an error message and stop the program. Otherwise allocate a text buffer of needed size, read the file content into the buffer and send it to the gateway, as you did in Problem 1 for a message.</li>
+
+     <li> Close the file.</li>
+   </ul>
+
+<p>You can try the program with any files, text or non-text. You can certainly try your programs on the files that you copied from the lab directory, <em>Declaration of Independence</em>, or Lincoln's <em>Gettysburg Address</em>.</p>
+
+<h4>Problem 3: Incorporating CRC into the message</h4>
+
+<p>As mentioned before, implementing a CRC program can be involved. We will use Ross Williams's solution in our lab. Read a bit the paper by Ross Williams at the following website. Do not spend too much time. The point here is to give you a sense that computing a generic CRC is not a very simple engineering task.<br>
+<a href = "http://www.ross.net/crc/crcpaper.html">http://www.ross.net/crc/crcpaper.html</a>
+
+<p>Next read a bit more the file <em>crcmodel.h</em>, especially, the section "How to Use This Package" where Williams discussed how to set up and use the program. I've created a program <em>crctest.c</em> following Williams's instruction. You can simply do the following to try it out.</p>
+
+<p>
+<b>make</b><br>
+<b>./crctest</b></br>
+</p>
+
+<p>You can revise the program by uncommenting Line 90 in <em>crctest.c</em> to test the case when the message is altered.</p>
+
+<p>Your task is then to create a function that your program could call from <em>source</em> when a message is prepared to be sent to the gateway. The program interface for this function should look something like this.</p>
+<p>
+<b>unsigned int generate_crc(char * text,  int len)</b></p>
+
+<p>where the <em>text</em> parameter is the data for which you try to generate the CRC, <em>len</em> is the length of the data. Note that though we use <code>char *</code> as the type for the text, the data could be binary. Thus a separate variable <code>len</code> is needed because we can't rely on the likes of <code>strlen()</code> to compute the length of the data for us. The function returns the computed CRC that can be used by the calling function.</p>
+
+<p>It might be the easiest if you simply rename the file <em>crctest.c</em> to be something like <em>crc-api.c</em> and revise the <code>main()</code> function such that it conforms the specification of <code>generate_crc()</code>. You will need to remove unnecessary activities in the current <code>main()</code> function. In particular, the <code>setup()</code> function needs to be called before every use of the CRC Model. In the current <code>main()</code> function, the <code>setup()</code> function is called twice because we compute CRC twice in the <code>main()</code> function. Your <code>generate_crc()</code> need to call the function <code>setup()</code> only once.</p>
+
+<p>Once the <code>generate_crc()</code> is written, you need to call it within the <em>source.c</em> right before sending the message to the gateway. As a matter of fact, you need to generate the CRC for the message and attach the generated CRC as a part of the message (trailer). How do we attach the CRC to the end of data (an array of bytes)? One way to accomplish the task is to allocate extra <em>r</em> bytes for the message buffer. Assume the length of the text to be sent is <em>n</em>. Then you'd need to allocate <em>n+r</em> bytes, where the first <em>n</em> bytes are for the data and the last <em>r</em> bytes are for the CRC. Once the data is read into the buffer, you can attach the CRC to the end of the data by the following mechanism.</p>
+<p>
+<b>memcpy(&(buffer[n]), &crc, length_of_crc)</b> where <em>length_of_crc</em> should be <em>r</em>.</p>
+
+<p>Your next task is to revise the <em>sink.c</em> so that the sink will determine if the data is correct by computing the checksum that comes with the data. If the data is not corrupted, the checksum now should be zero. If a non-zero checksum is the result of the computation, an error exists. The sink should report it to its screen. (Again, no correction or retransmission is involved.)</p>
+
+<p>Test your programs as you develop. Create an <b>answer.txt</b> to record a session or two in which both successful transmission of data without error(s) and cases when error(s) are detected. One of the tests should include the Lincoln's Gettysburg Address. Print the checksum for the text. You can use copy-and-paste mechanism, or some screen capture program such as <code>script</code> to record your sessions. Please do not include graphics-based screen-capture result. Also in the <b>answer.txt</b> please give the instructions how to compile and run your programs.</p>
+
+<p>When you're done with the lab problem, make sure you remove unnecessary files, then submit the work to Gitlab.</p>
+
+<p>Congratulations! You just finished this lab.</p>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 03: Experiment with TCP and Comparing among Different Programming Languages</h2>
+
+<h4>Goals</h4>
+<ul>
+  <li> <b>Develop an understanding of TCP performance:</b> We have been using TCP for communication between client and server applications. We haven't yet the faintest clue of the costs of using TCP as a transport protocol. This lab will have you build a tool for TCP for performance analysis and get you to think about how to use this tool to run performance evaluation experiments at a later time.</li>
+
+  <li> <b>Contrast TCP performance among different programming languages:</b> While we primarily program in C in this course, it helps if we compare the performance of different programming languages that implement the same network protocols. We will compare the results among C, Java, and Python.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The material developed for this lab was developed by Professor Felipe Perrone (Bucknell University) with some revisions by Professor Meng (Bucknell University). Some of this lab is based on material from <em>Unix Network Programming</em> Volume 1, by W. Richard Stevens, Bill Fenner, and Andrew M. Rudoff (Addison Wesley, 2004).</p>
+
+<p>Permission to reuse this material in parts or in its entirety is granted provided that the credits note is not removed. Additional students files associated with this lab, as well as any existing solutions can be provided upon request by e-mail to perrone[at]bucknell[dot]edu.</p>
+
+<h4>Setup</h4>
+
+<p>Create a directory in your Git repository called <b>lab03</b>, as in</p>
+
+<code>~/csci363/labs/lab03</code>
+
+<p>Use the <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/code/client-server-c/">client-server program example</a> in the lecture example directory as the base for your program.</p>
+
+<h4>Problem 1: The <font color = red>pingpong</font> application</h4>
+
+<p>In this problem, you will create a pair of client-server programs called <em>pingpong.c</em> and <em>reflectord.c</em>, which communicate using TCP byte streams. The general idea is that <b><font color = red>pingpong</font></b> will create a message of a given length, transmit it to <b><font color = red>reflectord</font></b>, which sends the same message right back to <b><font color = red>pingpong</font></b>.</p>
+
+<p><b>(A)</b> You will need to instrument the <b><font color=red>pingpong</font></b> to send a number of messages of a given size to another program <b><font color=red>reflectord</font></b> and wait for it to come back. You are asked to measure the following metrics.</p>
+
+<ul>
+  <li>Measure the time it takes to establish a TCP connection to the server. This includes all calls needed to establish a connection with the server.</li>
+
+   <li>Measure its <em>round trip time</em> (RTT). Note that we are calling a message a chunk of bytes with a given size. You might want to send first an integer with the number of bytes in the message and then the actually message.</li>
+
+   <li>Measure the time it takes to tear down an existing TCP connection. TCP tear-down for now can be considered closing the socket, though at the transport layer, it may be more involved than that. Once you know how to make this happen with C code, you will be able to put timing calls around it.</li>
+
+   <li>Measure the total time for establishing the connection, sending and receiving the message, and tearing down the connection.</li>
+</ul>
+
+<p>These time measurements can be obtained from placing calls to <em>gettimeofday(2)</em> in right places in your program. If you take these samples for each message sent from <b><font color=red>pingpong</font></b> to <b><font color=red>reflectord</font></b>, at the end of <b>pingpong</b>'s execution you will report four values:</p>
+<ul>
+   <li>The average time to establish a TCP connection.</li>
+   <li>The average RTT for the message.</li>
+   <li>The average time to tear down a TCP connection.</li>
+   <li>The average total time.</li>
+</ul>
+
+<p>The command line for <b><font color=red>pingpong</font></b> should be as follows:</p>
+
+<p><b><font color=red>pingpong</font> <em>num_msgs  msg_length  host  port</em></b></p>
+
+<p>where:</p>
+<ul>
+  <li> <b>num_msgs</b> is the number of messages</li>
+
+  <li> <b>msg_length</b> is the length of a message in bytes sent out by this program and returned by <b>reflectord</b>.</li>
+
+   <li> <b>host</b> is the symbolic name of a machine accessible from your network where <b>reflectord</b> is running, and</li>
+
+   <li> <b>port</b> is the port number at which <b>reflectord</b> is listening.
+</ul>
+
+<p>Running the program from a shell should look like:</p>
+
+<p><font color=red><b>$ pingpong 50 10000 machine.eg.bucknell.edu</b><br>
+One or more parameters missing.<br>
+Usage: pingpong [num_msgs] [msg_length] [host] [port]<br>
+<b>$ pingpong 50 10000 machine.eg.bucknell.edu 9010</b><br>
+0.001 0.034 0.002 0.038</font></p>
+
+<p>In this example, 0.001 represents the average time to create a TCP connection, 0.034 represents average the time to send and get back a message of 10,000 bytes, 0.002 represents the average to tear down a TCP connection, and finally 0.038 represents the average of the total time to create a connection, send and receive the message, and tear down the connection (with all averages computed over 5o samples). All time are in mili-seconds.</p>
+
+
+<p><b>(B)</b> Your second program, <font color=red><b>reflectord</b></font>, will be a <em>daemon</em>, that is, a server listening at an agreed-upon port and running in an infinite loop. This program should be very simple: wait for a connection request, establish the connection, listen for an incoming message, return the identical message to the sender, and go back to waiting for the next message. It is not critical whether or not you create a child process to handle the application in this lab.</p>
+
+<p>The command line for <b>reflectord</b> should be as follows:</p>
+
+<p><b><font color=red>reflectord</font> port</b></p>
+
+<p>where:</p>
+
+<ul>
+   <li> <b>port</b> is the port number at which <b>reflectord</b> is listening.
+</ul>
+
+<p>Create a <b>Makefile</b> for compiling your two programs. Also, make sure to use your <b>wrappers.h</b> and <b>wrappers.c</b> from last week when appropriate and to augment them if you use any new system or library calls that you could wrap.</p>
+
+<p>Test your program by running the program with a few different sets of parameters, different number of repetition, different size of messages. Also run your server program and client program on different computers.</p>
+
+<p>When you're done with this problem, you need to do:</p>
+
+<b><font color=red>
+<ul>
+  <li>git add lab03/wrappers.h</li>
+  <li>git add lab03/wrappers.c</li>
+  <li>git add lab03/Makefile</li>
+  <li>git add lab03/pingpong.c</li>
+  <li>git add lab03/reflectord.c</li>
+  <li>git commit -m "Lab 3, problem 1 completed"</li>
+  <li>git push</li>
+</ul>
+</font></b>
+
+<h4>Problem 2: Comparing measurements from different programming languages</h4>
+
+<p>Programming language C usually is considered very fast, time efficient in execution. In this part of the lab, you are asked to assess the performance of C by comparing with other two programming languages, Python and Java, when doing similar type of work, i.e., establishing and tearing down TCP connections, sending and receiving messages of various size.</p>
+
+<p>You are given a set of client-server programs written in Java and Python. Copy the programs to your local lab directory, run the program with various input sizes, record the time needed to complete the tasks to compare with what C program can accomplish.</p>
+
+<ul>
+  <li>Copy all programs from <b>~cs363/Spring13/student/labs/lab03/</b></li>
+
+  <li>You should see four programs, one pair in Java and one pair in Python.</li>
+
+  <li>Take a look at these programs and make sure you understand the flow of the programs, which should be the same as what you did in Problem 1 using C.</li>
+
+  <li>Run these programs with the following repeating counts and message sizes. For each message size, record the average set-up time, average message transfer time, average tear-down time, and average total time. Repeating the experiments with all three languages, C, Java, and Python. Record the results in a text file <b>lab03-answers.txt</b> (It is fine if you prefer using OpenOffice or Word file.)</li>
+
+<p>
+<table border = 1>
+<tr>
+  <th>Repeating count</th> <th>Message size</th>
+  <th>Avg set-up time</th> <th>Avg transfer time</th>
+  <th>Avg tear-down time</th> <th>Avg total time</th>
+</tr>
+
+<tr>
+  <td>5</td>  <td>1000</td> <td></td> <td></td> <td></td> <td></td>
+</tr>
+<tr>
+  <td>5</td>  <td>10000</td> <td></td> <td></td> <td></td> <td></td>
+</tr>
+<tr>
+  <td>5</td>  <td>100000</td> <td></td> <td></td> <td></td> <td></td>
+</tr>
+</table>
+</p>
+
+   <li>Repeat the above experiments with client and server running on different computers. Note that in this experiment, Python program might not handle well with message size of 100000 bytes. If so, try the Python program with just 1000 and 10000 byte-long messages.</li>
+
+   <li>You should have a set of six tables with numeric results, two for each of the languages, one with client and server running on the same computer, the second with the programs running on different computers.</li>
+
+   <li>Write a paragraph or two in <b>lab03-answers.txt</b> describing the results and what you think of the results. Is there any pattern? Does the time needed to send messages of different size change linearly with the size of the message? Why or why not? You might not have all the insights for the reasons, but what is your speculation?</li>
+
+</ul>
+
+<p>When you're done with this problem, you need to do:</p>
+
+<b><font color=red>
+<ul>
+  <li>git add lab03/lab03-answers.txt</li>
+  <li>git commit -m "Lab 3, problem 2 completed"</li>
+  <li>git push</li>
+</ul>
+</font></b>
+
+<p>Congratulations, you've finished this lab!</p>
+</body>
+</html>

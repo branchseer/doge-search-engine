@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 05: Super-Servers and the <em>utmp</em> Database</h2>
+
+<h4>Goals</h4>
+
+<ul>
+  <li> <font color=red><b>Work with utmp database:</b></font> The Linux operating system (Unix in general) keeps extensive database about usage of the system. In this lab, we will explore one such database, the <em>utmp</em> database and learn how to extract information from it.</li>
+
+  <li> <font color=red><b>Write server programs that can serve multiple ports:</b></font> All servers we created so far can handle one protocol only. In production environment, we need to have servers that can listen at multiple ports and work with different application protocols. We will learn how to accomplish this task in this lab.</li>
+</ul>
+  
+<h4>Introduction</h4> 
+
+<p>Often a process has to
+deal with multiple input streams. For example, a server may have to
+listen on multiple ports, each of which corresponds to a different
+type of clients. In the case of Linux, a <em>super</em> server called
+<code>xinetd</code> is running to service all types of
+requests such as <code>ssh, finger</code> and others. (Read
+<code>man xinetd</code> for more information.) A server can
+create and <em>listen</em> on multiple sockets, each of which is for
+one type of service. When there is a in-coming request, a system
+call <code>select</code> (or similar calls on other systems)
+can help determine which of the multiple sockets has data ready for
+read. Based on this condition, the server can take (read) information
+from that particular socket and work from there.</p>
+
+<p><b>How Does <code>select</code> Work</b>: The system call
+<code>select</code> works
+with a piece of data structure called <code>fd_set</code> which is
+essentially a collection of bits. If one of the input streams is ready
+(has data), the corresponding bit will be set by the operating
+system. The <code>select</code> call will return the number of streams that are ready as
+result. When the call is returned, the calling program can select the
+input 
+stream that is ready and continue the process with that stream. When
+multiple inputs are ready, the calling program can deal with them one
+at a time.</p>
+
+<p><b>The <em>utmp</em> database</b>: Like many modern computing systems, Linux keeps track of information about its users, in particular, who are currently using the system. By keeping these information, the Linux operating system can respond to commands such as <code>who</code>, <code>w</code>, and <code>fingure</code> (if you have never used these commands, read these manual pages, and give these commands a try.) Linux keeps a database of these information in a file called <code>utmp</code> (for user temporary files.) Your second task today is to learn to work with this file and extract user information from this file. Once becoming familiar with the <code>utmp</code>, you are asked to integrate this service as a part of a super server.</p>
+
+<h4>Setup</h4>
+
+<p>Create a directory in your git repository called <b>lab05</b>, as in</p>
+
+<code>~/csci363-s13/labs/lab05</code>
+
+<p>Copy all files from <code>~cs363/Spring13/student/labs/lab05/</code> to your own lab directory. You should see a collection of seven files, <code>echoClient.c, getwho.c, Makefile, superServer.c, tcplib.c, tcplib.h,</code> and <code>timeClient-udp.c</code>, from which you are to create your solution.</p>
+
+<h4>Problem 1: Understand how a <em>super</em> server works</h4>
+
+<p>Your first task is just to compile the programs using the
+<code>make</code> command. You should get a <code>superServer</code> and two
+clients <code>timeClient-udp</code> and <code>echoClient</code>. Compile and run
+this set of clients and server to see how they work. <b>Note: before you compile the program, change the port numbers in the programs to your assigned port numbers.</b> You should
+run the server first, then run the <code>echoClient</code> without
+actually typing a line of input to the client program so the client program
+doesn't quit before you run the time client. The point here is to
+demonstrate that the server is actually able to handle multiple
+clients simultaneously. While the <code>echoClient</code> is running (that is, you started the <em>echo client</em> without typing a line to it), try also the <code>timeClient-udp</code> which is supposed to get a time reading from the server and displays on the client's screen. In this example, the time client actually is a UDP client. This means that a super server can deal with multiple UDP and TCP clients, simultaneously.</p>
+
+<p>Read the programs <code>superServer.c</code> and the two
+clients. Make sure you understand how they work. Pay special
+attention to the <code>select</code> call, and the
+<code>FD_SET</code> related macros.</p>
+
+<p>Create an <font color=red><b>answers.txt</b></font> and write a paragraph or two describing what the macros <code>FD_ZERO()</code> and <code>FD_SET()</code> do, and what the system call <code>select()</code> does. Consult the relevant manual pages if needed.</p>
+
+<h4>Problem 2: Working with the Linux <code>utmp</code> database</h4>
+
+<p>As described in the <em>Introduction</em> section of the lab, the Linux operating systems keeps information about current users in a database called <code>utmp</code> from which programmers can write program to access current user information. The <code>utmp</code> database essentially is a collection of records of the type <code>struct utmp</code> (read the manual page on <em>utmp</em> to find out the details.) The program <code>getwho.c</code> goes through the entire list of current users and counts how many records are in the database. Your task is to print out the user name (<code>ut_user</code>) based on the user type (<code>ut_type</code>.) You are asked to print only the normal user process (<code>USER_PROCESS</code>.) You are asked to revise the <code>getwho.c</code> program so that not only does the program print the counts (which it already does), but also print out the user name who are currently on the system.</p>
+
+<p>Before actually coding, you probably should read the manual pages for the three library calls used in the program, that is, <code>setutent(), getutent()</code> and <code>endutent()</code>.<p>
+
+<p>Once your program can correctly print who is currently on your local computer, try the program on a server such as <em>linuxremote</em> to see who are on those computers.</p>
+
+
+<h4>Problem 3: Make the <code>getwho</code> as a part of the super server</h4>
+
+<p>Now that your program <code>getwho.c</code> works correctly, revise the <code>superServer.c</code> so that <code>getwho</code> will be a part of the service. Here are a few notes about the integration.</p>
+
+<ul>
+  <li> The goal is to make <em>getwho</em> as the third service the current super server can provide, in addition to the <em>echo</em> and <em>time</em> services.</li>
+
+  <li> The new service <em>getwho</em> will be a TCP service so that you can user any and all functions in <code>tcplib</code>.</li>
+
+   <li> You need to package the output from the original <code>getwho.c</code> program into a string with a new line character after each user name. When a client requests a <em>getwho</em> service to the server, the server should return a list of user names who are currently on the server one user per line, e.g., <br>
+<pre>
+user 1
+user 2
+user 3
+</pre>
+</li>
+
+  <li> So you don't make the program terribly complicated for non-essential functions of the program, you can limit the length of the string to be a reasonable length (e.g., 512 or 1024 bytes.) You do need to check that if the data requires string longer than that, your program should simply drop the data, not to let your buffer be overrun.</li>
+
+  <li> You are free to decide how you pass this information to the client. A good strategy might be to pass the length of the string as an integer first, then send the actual string that contain all the user names.</li>
+
+  <li> You need to write a simple TCP client (you can model it after any TCP client examples we've discussed so far) that sends a request to the super server and asks for a list of current users on the server and then displays the result on the client's screen. The request can be represented by an arbitrary integer or a character, it is your choice. (This becomes of part of the application protocol.)</li>
+
+  <li> You were only assigned to use two port numbers, but this lab requires you use three in the super server. Please add 1000 to your assigned port number to make a third port number.</li>
+
+</ul>
+
+<h4>Submission</h4>
+
+<p>Submit all your program and <font color=red><b>answers.txt</b></font> to your gitlab account. At the least, you'd have the following.</p>
+<ol>
+  <li> The text file <font color=red><b>answers.txt</b></font>.</li>
+
+  <li> The revised <code>superServer.c</code> source code which now
+  should include three services, <code>echo, time</code> and
+  <code>getwho</code>.</li>
+
+  <li> The revised <code>Makefile</code>.</li>
+
+  <li> A trace of executing server and each of the multiple clients using
+  copy-and-paste, or using the <code>script</code> command.</li>
+
+  <li> Make sure you submit a complete package so I can compile and run the programs.</li>
+</ol>
+
+<p>Congratulations, you've finished this lab!</p>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<h2>Lab 10: Linux Remote Service</h2>
+
+<h4>Goals</h4>
+
+<ul>
+   <li> <font color=red><b>Gain experiences with Linux terminal manipulation:</b></font> You will learn how to manipulate Linux terminal settings such as turning off echo for command-line input.</li>
+
+   <li> <font color=red><b>Practice more with server and client programming:</b></font> You will write another set of server/client programs. The pair will allow a user to remotely log unto a server that is running the server you are to write.</li>
+</ul>
+
+<h4>Credits</h4>
+
+<p>The work is based on labs and exercises from previous offerings of CSCI 363.</p>
+
+<h4>Introduction</h4>
+
+<p>In this lab you will create a pair of programs that mimic the
+behavior of Linux login server and client. You will be given a set of
+source programs as a starting point. One of the programs, <em>login.c</em> asks the user to enter a user name and a corresponding password. The program checks the validity of the user name and password against a given database. If the user name and password matches properly, the program starts a user shell with which the user can do any Linux work. The other two programs are a pair of remote login client and server <em>rshd.c</em> and <em>rshClient.c</em>, some of the functions are implemented in a separate file called <em>rsh.c</em>. This set of programs allow a user to remote log into a server without any authentication.
+Your task is to try these programs first, then read the programs to understand the process. Finally you will revise the programs such that the remote login server will ask for user name and password for authentication. Only the users with proper credentials can log onto the remote server.</p>
+
+
+<h4>Exercises before Programming</h4>
+
+
+<p>You first do the following to gain some first-hand experiences.</p>
+<ul>
+  <li> Copy all files from the directory
+  <code>~cs363/Spring13/student/labs/lab10/</code> into your <em>lab10</em> directory.</li>
+
+  <li> Compile all source code by using <code>make</code>. A number of executables will be generated. The program
+  <em>mlogin</em> allows a user to enter a user name and a password to use a shell on a local Linux system. The program <em>rshd</em> is a server program that allows a user to get into a remote system without password. The program <em>loginClient</em> is a client program that will connect to a host that is running <em>rshd</em>. The program
+  <em>mypasswd</em> is a program that allows you to create a password
+  for an existing system user. You also should see two text files called
+  <em>passwd</em> and <em>shadow</em> which is a faked password file and a faked shadow file. The use of these files will become clear as we move on the lab exercises.</li>
+
+  <li> Create an account for yourself by adding a line similar to any lines in the <em>passwd</em> file using a text editor. Read manual page <em>passwd</em> in Section 5 by typing <code>man -s 5 passwd</code> if you are not sure how the file is structured. You then set a password for the account you just added to the <em>passwd</em> file by the command
+<pre>
+host% mypasswd user
+</pre>
+where <em>user</em> is a user name that is in the <em>passwd</em> file. The program
+will ask you for a password. Note that this is a <em>faked</em>
+password. Don't enter your real password. This faked password is
+stored in a <em>shadow</em> file in your current directory.</li>
+
+  <li> Run <em>mlogin</em> which emulates the behavior of Linux login
+  program. When asked for user name and password, give the user name and password you just created moments ago.</li>
+
+  <li> Run <em>rshd</em> which is a remote shell program, then run
+  <em>rshClient</em> which is a client program that connects to the
+  rshd. If you run <em>rshd</em> on a remote computer, the <em>rshClient</em> will allow
+  you to get into that computer.</li>
+</ul>
+
+
+<h4>Some Background Information</h4>
+
+<p>We describe some basic ideas here. There are three
+major components in this set of programs.</p>
+<ul>
+  <li> Client-server: The behavior of this set of programs is very similar to any real Linux <em>ssh</em>. The only difference is that this set of programs does not use <em>SSL</em>, or Secured Socket Layer. The pair is still a set of
+  client-server programs. The server waits on a specific port, the
+  client connects to it and receives the service.</li>
+    <ul>
+  <li> The server <code>rshd</code>
+   waits on a particular port for clients 
+  to connect. Once it receives and accepts a connection request, it
+  spawns a child either using a thread, or forking a new process to
+  service the client.</li>
+   </ul>
+
+  <li> Redirect input and output devices: Before starting the shell service,
+  the server (<em>rshd</em>) has to redirect the input
+  and output to the communication channel established with the
+  client. This is done by first closing the standard input, standard output
+  and standard error devices, then reassigning these device numbers (0,
+  1, and 2) to the socket connection number of the client. The <em>dup</em> system call is used to <em>duplicate</em> the socket with the <em>stdin, stdout</em>, and <em>stderr</em> devices.</li>
+  <ul>
+  <li> Once redirecting input/output devices is completed, all input (commands) from the client is
+  sent to the shell and all shell output will be re-directed to the
+  client through the socket connection that was established between the client and the server.</li>
+
+  <li> The client simply reads the input from the keyboard, sends it
+  to the server, and prints the response from the server to the
+  screen.</li>
+  </ul>
+
+  <li> Check the user name and password: This is done through the
+  faked system calls to <code>getpwnam()</code> and <code>getspnam()</code>. We created a pair of faked system calls because on our Linux systems, we no longer use the <em>passwd</em> and <em>shadow</em> files to check user credentials. But the essential concepts are the same. Read manual pages on <code>getpwnam()</code> and <code>getspnam()</code> to gain some basic understanding of this concept.</li> 
+</ul>
+
+
+<h4>Your Assignment</h4>
+
+<p>You will develop a set of remote login service program
+using the two existing pairs of programs. The remote login service
+should check the validity of the user name and password
+combination. If the user is valid, the program provides a shell
+service to the remote client. If the user is invalid, the program
+simply ignores the request and prompt the user for next trial if so
+chose by the user, just like any Linux systems would do. The user credential files <em>passwd</em> and <em>shadow</em> reside on the server side.</p>
+
+<p>Note that the user name and password sent to the remote server are in plain text. So the service is not secure. In order to make a secure service, we need to use <em>Secure Sockets Layer</em> or <em>SSL</em> protocol, which we will explore later.</p>
+
+<p><b>When you finish the lab, clean up the directory, submit all files to Gitlab.</b></p>
+
+<p>Congratulations! You just finished this lab.</p>
+</body>
+</html>

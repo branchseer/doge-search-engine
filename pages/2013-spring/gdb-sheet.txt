@@ -1,0 +1,33 @@
+GDB Information Sheet
+
+A few useful commands in gdb:
+0. To use 'gdb' one has to compile the program with the "-g" option
+
+1. To start 'gdb' within emacs:
+   -- M-x gdb <ret>
+   -- supply an executable name, e.g., "a.out"
+
+2. To set up a break point:
+   -- b function-name, e.g., b main
+   -- b line-number, e.g., b 15
+
+3. To examine a variable:
+   -- p variable-name, e.g., p count
+
+4. To change the value of a variable in the context:
+   -- set var = val, e.g., s count = 5
+
+5. To go to next line in the code:
+   -- n or next
+
+6. To step into a function:
+   -- s or step
+
+7. To continue from the current break point:
+   -- c or cont
+
+8. To see where an error (e.g., segmentation fault) occured:
+   -- where
+
+9. To quit gdb:
+   -- q or quit

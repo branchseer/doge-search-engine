@@ -1,0 +1,528 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Client-Server Project</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+
+<a id = "p1part1"></a>
+<h3>Project 1: Search Engine - A Client Server Program Pair</h3>
+
+<p>The goal of the project is to produce a limited scale, but functional
+search engine. The search engine should provide a count and a partial list of web 
+pages that are pointing to a searched (target) web page. For example, 
+if one searches for <em>www.bucknell.edu</em>, your search engine should report
+that a total of 2,345 web pages (<em>This is not a real count.</em>) in Bucknell domain are pointing to <em>www.bucknell.edu</em> and the first <em>n</em> URLs pointing the target page are listed, where <em>n</em>
+is a reasonable number (e.g., 30 or 50). The search engine you are about
+to build is in a <em>limited scale</em> that it is required
+to collect a limited number of documents (e.g. in the order of a few
+thousands to a few tens of thousands of pages). The more your search engine can collect,
+the better it is. It would be difficult, if not impossible, for a lab desk-top
+computer to collect all pages in a given domain, e.g., <em>bucknell.edu</em>.</p>
+
+<p>This is a multi-phased team project. You can work in a team of two to three, or you can work alone. You are encouraged to work in teams. You are asked to write the program in C. However if you have a good reason to develop the project in other programming languages, please discuss it with me. In general, if you use more modern languages, you are asked to provide more functionality in the project.</p>
+
+<a id = "duedates"></a><h4>Due dates</h4>
+
+<p>Phase 1: Wednesday February 6th.</p>
+<p>Phase 2: Wednesday February 13th.</p>
+<p>Phase 3: Wednesday February 27th.</p>
+<font color=red><strike><p>Phase 4: Friday March 8th.</p></strike></font>
+<p>Phase 4: Monday March 25</p>
+
+<h3>A Few Words of Caution</h3>
+
+<p>Before implementing the projects, I would ask that all of us keep the following in mind about the project.</p>
+
+<ul>
+  <li> The goal of the project is for you to learn and practice network programming and C. I ask you to use standard C library only in your project. If you use any other existing code (a library, or a piece of code that is shared freely from the internet), you need to do two things.
+      <ol>
+         <li> Make sure you are allowed to use the code by the owner(s) and quote the reference.</li>
+
+         <li> Discuss what you use with me and justify why you'd use the external code. If you have a good reason, it will be fine to use some external code, but I'll probably ask you to implement some additional features so that your work will be equivalent to that by those who only use standard C.</li>
+      </ol>
+<p>Note that it is fine to study these public code and algorithms used in these code, and implement the ideas by yourself (that is, you can't just copy-and-paste the code in its entirety or use a set of libraries without doing the two things listed above.) In this case, you should also quote the references.</p>
+
+  <li> Our program will create some traffic over the campus network and load on the computers your programs run. Be very careful that when you leave the computer, make sure you don't leave un-used process running. If your program does take a long time to run (this could be necessary) and your program is running on a lab computer, use the Linux <code>nice</code> command to lower the priority of your process.</li>
+
+   <li> Do not run your program on the college servers (e.g., <code>linuxremote</code> or <code>linuxremote1, linuxremote2,</code> and <code>linuxremote3</code>.) Rather, run your program in lab computers in Breakiron 164 or Dana 213. You may remote log into the servers, but please <code>ssh</code> into the lab computers before running your programs. The names for these lab computers are <code>dana213-lnx-n</code> or <code>brki164-lnx-n</code> where <em>n</em> is a number (1-24).</li>
+
+   <li> In a later phase of the project, your program will visit many web pages from the Bucknell server. Be extremely mindful that do not let your program repeatedly visit the server in a short burst. You should have your program sleep for a couple of seconds for every 30 or so pages the program visits. It will be helpful if you use multiple threads with one thread visiting web servers and other thread(s) process pages. Or you could use multiple processes created through <code>fork()</code>. The one thread (process) that visits web servers must pause or sleep after visiting every a few 10s of pages.</li>
+
+</ul>
+
+<h3>Search Engine Architecture</h3>
+
+<p>A search engine consists of two major parts, somewhat independent of
+each other, as can be seen from the <a href = "./projects/client-server-project.html#arch-figure">figure</a>. One is on the left side of
+the <em>Document Collection</em>, which answers user's queries. The
+other is on the right side of the <em>Document Collection</em>, which
+collects information from the web so the URLs related to the
+user queries can be retrieved. A <em>crawler</em> goes around the web to
+read web pages. The 
+information is then sent to a <em>parser</em>. (In a general-purpose search engine, a more elaborate <em>indexer</em> is needed. Since we are only interested in the hyper-text links that points to a particular web page, we can omit the indexing part.) The <em>parser</em> extracts the URLs contained in the given web page. These URLs are <em>pointing to other web pages from this web page.</em> If the current given web page is denoted as <em>w</em> and the URLs extracted from <em>w</em> are <em>s</em>, then effectively page <em>w</em> is pointing to each page <em>s<sub>i</sub></em> for all <em>i</em> in the set <em>s</em>. When a user issues a query the
+document collection is searched and a list of URLs is
+generated. Each of the URLs presented as an answer to the query is pointing to the queried web page (target).</p>
+
+<center>
+<img src = "./projects/architecture.jpg" alt = "Search Engine Architecture" width = "500" height = "300" id = "arch-figure" align = "center">
+<p>Figure: Architecture of A Simple Search Engine</p>
+</center>
+
+<h3>Phase 1: Retrieve a Web Page and Parse URLs in the Page</h3>
+
+<p>The first phase of the project is to retrieve a web page and parse out all the URLs contained in the web page. You are to construct a TCP client program that is able to send an HTTP <b>GET</b> request to a web server and retrieve the page back from the server. Once a page is retrieved, the second task of this phase is to parse out all the URLs in the page.</p>
+
+<p>An HTTP client (a.k.a. web client) establishes a connection to a web server through a TCP socket. After creating the socket, the client makes a <em>connection</em> request to the server, the server acknowledges the connection and now the communication between the server and the client is established. Once a TCP connection is ready, the client can send either an HTTP 1.0 request or an HTTP 1.1 request. The server will send back the page being requested. The client then can process the page.</p>
+
+<p>See <a href = "code/client-server-c/webclient.c">the web client program example</a> for code details. The client program in that example uses a library <em>tcplib.c</em>. You are asked to use your own wrapper programs developed in your lab assignment. In addition, the example program simply prints the received web page to the standard output (screen), your program must save the content in a variable that can be used by other parts of the program.</p>
+
+<p>The second task in this phase of the project is to parse out all URLs contained in the received page. The following is a simple web page that contains multiple URLs. Your task is to extract all the URLs and to complete the URLs that are relative.</p>
+
+<!-- a preformated page begins -->
+<!-- <textarea disabled="true" style="boder: none;background-color:white;" rows = "25" cols = "80"> -->
+<textarea rows = "25" cols = "80">
+<html>
+<head>
+<title> test page</title>
+</head>
+<body>
+<ul>
+</ul>
+<p> some paragraphs
+<p > more paragraphs</p>
+<p     >more paragraphs
+<a     href = "http://www.eg.bucknell.edu/~xmeng/test/test.html">this page</a>
+is valid<p
+>
+line 2
+<a 
+href = "../index.html">2</a>
+<a href = "../tags.html">email</a>
+<a href=
+"../foun/sites.html">foundation</a>
+<ul>
+</ul>
+</body>
+</html>
+</textarea>
+<!-- a preformated page ends -->
+
+<p>Here are discussions on some technical details that may help you to carry out the task.</p>
+
+<ul>
+  <li> In general, the client doesn't know how long the retrieved page is. For example, the above page is short with a few hundred bytes. The Bucknell home page we received on January 22nd, 2013 is about 24,000 bytes long. Other pages can be much longer or shorter. While some server may send back the length of the page as a part of the response header, most servers don't. The question then is how the client program allocates memory space to store the page. One simple strategy is to allocate certain fixed amount of memory (e.g., 32 K) for a received page. The client can then receive up to that amount in a page. Anything after that is dropped. This approach is problematic in two ways, one is that the client may drop portion of a long page; the second is that if the client needs to process hundred, thousands, or millions of pages, the memory management becomes extremely challenge (a lot is wasted). An alternative would be to manage a dynamic data structure (e.g., a linked list). The client receives the page in multiple chunks and each chunk is stored in one node of the list. When the page is received completely, the client can rebuild the page (now we know the exact amount of memory the page needs) from the linked list.</li>
+
+  <li> Parsing out URLs could be fun and challenge. You could use a finite-state machine to recognize the pattern (preferred), or you could use a regular expression to do pattern matches. Or you could use direct string matching. Regardless which method to use, your program would have to be able to recognize URLs of various presenting forms. (The above examples gives some flavors of variations in URL.)</li>
+
+  <li> URLs contained in a page could be <em>absolute</em> or <em>relative</em>. An absolute URL specifies all components of an URL, for example, <code>http://www.eg.bucknell.edu/~xmeng/teaching.html#eg290</code>. When an absolute URL is extracted from a web page, it can be used directly to retrieve the web page specified by the URL. On the other hand, a relative URL gives a path relative to the current web page. For example if the web page from which the relative URL is extracted is <code>http://www.eg.bucknell.edu/~xmeng/index.html</code> (often called a base URL) and a relative URL from the given page is extracted as <code>../teaching.html</code>, then the absolute URL should be <code>http://www.eg.bucknell.edu/~xmeng/teaching.html</code>. Your program will need to convert all relative URLs to absolute URLs.<br>
+
+<p>The basic strategy to convert a relative URL to an absolute URL is to scan the URL file path from left to right, every time a current directory notion "./" is met, you simply remove these two characters from the URL; every time a parent directory notion "../" is met, you remove the directory name above this level. For example, a relative URL <code>"level1/./level2/../level3/file.html"</code> is given, its absolute form should be <code>"level1/level3/file.html"</code> after the process.</p>
+
+<p>When the file path scan and conversion is finished, attach the entire path to the current host (e.g., <code>http://www.bucknell.edu/</code> or <code>http://www.cnn.com/</code>.)</p></li>
+
+</ul>
+
+<h4>Strategy to tackle the problem</h4>
+
+<p>You can approach the problem in many different ways. Here is what I would suggest.</p>
+
+<ol>
+   <li> Develop a simple web client using the <code>socket</code> interface first, similar (or identical) to the example given in <code>code/client-server-c/webclient.c</code>. This client program should be able to retrieve a web page from a given URL.</li>
+
+   <li> Test your program on some simple pages such as <a href = "http://www.eg.bucknell.edu/~xmeng/index.html">http://www.eg.bucknell.edu/~xmeng/index.html</a> and <a href = "http:/www.eg.bucknell.edu/~xmeng/testpages/index.html">http://www.eg.bucknell.edu/~xmeng/testpages/index.html</a>.</li>
+
+   <li> When retrieving web page part is working fine, move on to the next task, extract all the URL links. What you can do is to save the retrieved the page to a text file, for example, by redirecting the output from the screen to a file. Then develop your part of the code to extract URLs out from the saved text file. Doing so can avoid un-necessary network traffic.</li>
+
+   <li> You can divide the task of extracting URLs into two phases. First work with the absolute URLs in a web page. Then work with the relative URLs in a page. Again you can start with the simple pages such as <a href = "http://www.eg.bucknell.edu/~xmeng/index.html">my home page</a>, then move on to more complicated pages where there are many relative URLs such as <a href = "http://www.eg.bucknell.edu/~xmeng/test/relative-urls.html">http://www.eg.bucknell.edu/~xmeng/test/relative-urls.html</a></li>
+
+   <li> When all is working fine, try to download the Bucknell's home page at <a href = "http://www.bucknell.edu/">http://www.bucknell.edu/</a> and extract all URLs there and convert any relative URLs into an absolute URL. The number of URLs in Bucknell's home page is about 130 or so last time I tried it. <b>Be very careful not to over run the network and Bucknell's web server.</b> See the <em>Words of Caution</em> at the beginning of the assignment.</li>
+
+</ol>
+
+<h4>Deliverable</h4>
+
+<p>You are to submit to your Gitlab account the following by the deadline for this phase.</p>
+<ol>
+  <li> Your C program and their associated header files;
+  <li> Bucknell's home page you retrieved and a text file containing the list of URLs your program extracted from Bucknell's home page;
+  <li> A text file that briefly describe the following (total length no more than two pages, or 800 words):
+      <ul>
+         <li>Names of all team members</li>
+         <li>Your approach to solve the problems for this phase of the project</li>
+         <li>A few points of highlight of your project</li>
+         <li>Major difficulties your team encountered and how you resolve them.</li>
+         <li>Any other points or suggestions that you would like to share with me</li>
+      </ul>
+  <li> Submit your work through <em>Gitlab</em>. Create a <code>project1</code> folder under your <code>csci363-s13</code> you created earlier, upload (<code>push</code>) all your files in the <em>project1</em> directory by the deadline.
+</ol>
+
+<a id = "p1part2"></a><h3>Phase 2: Build a Simple Web Search Engine</h3>
+
+<p>The second phase of the project asks you to create a web server (a simple search engine) that can answer user queries about a web page your program has visited and <em>indexed</em>. The type of queries your search engine need to be able to handle is very simple. The query gives a URL for a web page. Your server program will be able to provide information such as the number of out-going URLs collected from this web page and a list of first 20 of these URLs, if the targeted web page has that many out-going URLs. A typical user interaction would look as follows (here we only list text, your should be able to do it in a browser).</p>
+
+<textarea rows = "40" cols = "120">
+User query: <http://www.eg.bucknel.edu/~cs363/2013-spring/index.html>
+Search engine answer: 
+a total of 11 URLs found, the first 11 of 11 of these URLs are:
+
+1. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/syllabus.html">http://www.eg.bucknell.edu/~cs363/2013-spring/syllabus.html</a>
+
+2. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/schedule.html">http://www.eg.bucknell.edu/~cs363/2013-spring/schedule.html</a>
+
+3. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/resources.html">http://www.eg.bucknell.edu/~cs363/2013-spring/resources.html</a>
+
+4. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/gitlab-intro.html">http://www.eg.bucknell.edu/~cs363/2013-spring/gitlab-intro.html</a>
+
+5. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/labs/lab01-sys-program.html">http://www.eg.bucknell.edu/~cs363/2013-spring/labs/lab01-sys-program.html</a>
+
+6. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/labs/lab02-tcp-socket.html">http://www.eg.bucknell.edu/~cs363/2013-spring/labs/lab02-tcp-socket.html</a>
+
+7. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/projects/client-server-project.html">http://www.eg.bucknell.edu/~cs363/2013-spring/projects/client-server-project.html</a>
+
+8. <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/code/">http://www.eg.bucknell.edu/~cs363/2013-spring/code/</a>
+
+9. <a href = "http://www.bucknell.edu/x1324.xml">http://www.bucknell.edu/x1324.xml</a>
+
+10. <a href = "http://www.bucknell.edu/x1325.xml">http://www.bucknell.edu/x1325.xml</a>
+
+11. <a href= "http://www.bucknell.edu/Documents/Engineering/ComputerScience/student-conduct-policy.pdf">http://www.bucknell.edu/Documents/Engineering/ComputerScience/student-conduct-policy.pdf</a>
+
+</textarea>
+
+<p>The following sections discuss some of the technical details how we can implement such a simple search engine.</p>
+
+ <h4>2.1 Creating a server program as a web server</h4>
+
+<p>A web server essentially is a TCP based server program that follows the HTTP protocol as the application-layer protocol. Take a look at the <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/code/client-server-c/echo-server.c">echo-server.c</a> program in the following.</p>
+
+<textarea rows = "55" cols = "120">
+/*
+ * server.c - main
+ */
+#include <stdio.h>
+#include "tcplib.h"
+#define ECHOPORT        2500       /* a non-privilege port so all can use */
+#define MAX             512
+
+
+int main(int argc,char *argv[])    {
+
+  int s, t;
+  void doEcho(int);
+
+  s = socketServer(ECHOPORT);
+  while (1)    {
+    if (s > 0)
+      t = acceptConn(s);
+    else	{
+      fprintf(stderr," socket error\n");
+      exit(1);
+    }
+    if (t > 0)  {
+      doEcho(t);
+    }  else {
+      fprintf(stderr," connection error\n");
+      exit(2);
+    }
+  } /* while(1) */
+  close(s);
+  return 0;
+}
+
+void doEcho(int t)   {
+
+  char buf[MAX];
+  char echo[MAX] = "Echo --> ";
+  int size;
+    
+  if ((size = read(t, buf, MAX)) < 0))  {
+    fprintf(stderr," read error\n");
+    exit(3);
+  }
+  buf[size] = 0;
+  strcat(echo, buf);
+  size = strlen(echo);
+  if (write(t, echo, size) < 0) {
+    fprintf(stderr," write error\n");
+    exit(4);
+  }
+  close(t);
+}
+</textarea>
+
+<p>In this program, the server is waiting for client connection requests at an agreed-upon port. Once a connection is accepted, the server reads a string from the client, and sends it right back to the client with an inserted phrase "Echo --> ". From the <a href = "http://www.eg.bucknell.edu/~cs363/2013-spring/code/client-server-c/echo-client.c">client</a> point of view, once a connection is accepted from the server, the client sends a message to the server and reads message sent by the server and prints it on the screen. This is the application protocol for this particular <em>echo</em> service!</p>
+
+<p>For a search engine, the interaction between a client and a server follows the HTTP protocol, which is slightly more complicated than a service such as <em>echo</em>. To understand how HTTP works, first let's do the following experiment.</p>
+
+<p>In your <em>echo-server.c</em> program, after reading the input from a client, instead of echoing the message back to the client, your <em>echo-server.c</em> program prints what is read from the client on the screen, and then sends back the following message to the client.</p>
+
+<textarea rows = "3" cols = "120">
+HTTP/1.0 200 OK\r\n\r\n<html><body>Hello, happy browser!</body></html>
+</textarea>
+
+<p>Note that essentially your server now sends back an HTTP response code first (<em>HTTP/1.0 200 OK</em>) followed by two pairs of newline and carriage returns. The HTTP response code is then followed by a web page.</p>
+
+<p>When your program prints what it reads from the client (a browser), you should see something similar to the following on your screen. We will explore the meaning of this request later.</p>
+<p>
+<textarea rows = "10" cols = "120">
+GET / HTTP/1.1
+Host: localhost:2500
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+</textarea>
+</p>
+
+<p>Compile and run the server program. Assume the server program is running on a lab computer, e.g., <em>dana213-lnx-1</em>.  Have your favorite web browser point at the URL <code>dana213-lnx-1:2500</code>. Here the server name is <em>dana213-lnx-1</em> and <em>2500</em> is the port at which the server program is running. You should use the computer name in which your server program is running and the port number that the server program is using. You should see the browser displays the content sent back by the server.</p>
+
+<p>The above is the simplest scenario of interaction between a web client and a web server. How does a client request a specific web page from a web server? In the same directory where your simple web server resides, create a simple web page with the following content (you can certainly make a more elaborate web page as you would like), calling the file with this content <em>simple.html</em> or a name of your choice.</p>
+
+<textarea rows = "10" cols = "120">
+<html>
+<body>
+<p>Hello, happy browser! This is my page.</p>
+<p><a href = "http://www.bucknell.edu/">Bucknell website</a>
+</body>
+</html>
+</textarea>
+
+<p>Set the access permission of <em>simple.html</em> as readable by the world. If you are not familiar with how to set permissions, please read the manual page on the command <code>chmod</code>. For what we need, you can simply do</p>
+
+<p><code>chmod 644 simple.html</code></p>
+
+<p>which sets the file readable by all and writable by the owner (you) only.</p>
+
+<p>Revise your <em>echo-server.c</em> program by the following steps.</p>
+<ol>
+  <li> Revise the <code>write()</code> statement in the <em>echo-server.c</em> program so that it only sends back the HTTP response code ("HTTP/1.0 200 OK"), not sending the in-line simple web page code.</li>
+
+  <li> Have your server program open and read the file <em>simple.html</em> from the disk, send the contents being read directly to the client (web browser) using the <code>write()</code> system call. Doing so your web browser that made the request to your server should see the <em>simple.html</em> displayed in the browser and you should be able to click the hypertext link from within that page.</li>
+
+</ol>
+ 
+<p>Now let's read what the original client request. The client (a web browser) sends a request tot the web server when the browser makes a connection to the server. The command <em>GET / HTTP/1.1</em> indicates that the browser wants to read the root HTML page at the server. If a browser would request a specific file, e.g., <em>simple.html</em>, the parameter of the <em>GET</em> command would look as follows.</p>
+<p><code>GET /simple.html HTTP/1.1</code></p>
+<p>Confirm this phenomenon by changing the URL which the browser uses to access the web page as</p>
+
+<p><code>http://dana213-lnx-1:2500/simple.html</code></p>
+
+<p>Load the web request again. You should still see the content of <em>simple.html</em> displayed on the browser screen. In addition, you should see from the server side that the parameter of the <em>GET</em> command has changed from the root "/" to "/simple.html." Other pieces of common requests from a browser include the host name of the server, the agent name (the browser), the type of application the browser can handle (e.g., text/html, or application/xml), the accepted language, the accepted encoding mechanism, among others.<p>
+
+<h4>2.2 How to send a query to a web server</h4>
+
+<p>Now that we know how a web client (e.g., a browser) interacts with a web server, we can turn our attention to how to make a web server a <em>search engine</em> and how a web client such as a browser to send query to a search engine and how a search engine sends the search results back to the client.</p>
+
+<p>A web client can send a piece of information such as a query to a web server by using the HTTP <em>POST</em> command. Let's first concentrate on the client side to see how we can <em>post</em> a request to the server.</p>
+
+<p>The basic mechanism to post a query from a web client is to use a <em>form</em> submission method in HTML. Once again, let's change the program <em>echo-server.c</em> to make it accept and process a query from a client. Instead of sending <em>simple.html</em> to the client, let's have the server send back the <em>form.html</em> which reads as follows.</p>
+
+<textarea rows ="25" cols = "120">
+<html>
+<title>HTML Form Example</title>
+</head>
+<body>
+<p>Hello World!</p>
+
+<form method= "POST" action="/form">
+<input type="text" name="FirstInput" size = "20">
+<font color="red">
+Type input into the box</font><br>
+<br>
+<input type="text" name="SecondInput" size = "20">
+<font color="green">
+Type input into the box</font><br>
+<br>
+<font color = "yellow"> <input type="submit" name="Submit" value = "Submit">
+</font><br>
+<br>
+</form>
+<p><h3>More free but formatted text</h3></p>
+</body>
+</html>
+
+</textarea>
+
+<p>Now have your browser point to your server, e.g.,<br>
+<code>http://dana213-lnx-1:2500/</code></p>
+
+<p>This time, instead of a simple web page, your browser screen should display a form with two input text boxes and a <em>Submission</em> button. Type some values into these two input text boxes and click the <em>Submission</em> button. In our example, we use an integer <em>123</em> and a string <em>"abc"</em> as the input values. Have your server read and print whatever the client is sending to the server. You should see something similar to the following printed on the server's screen.</p>
+
+<textarea rows = "16" cols = "120">
+POST /form HTTP/1.1
+Referrer: http://dana213-lnx-1:2500/
+Connection: Keep-Alive
+User-Agent: Mozilla/4.78 [en] (X11; U; SunOS 5.8 sun4u)
+Host: dana213-lnx-1:2500
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, */*
+Accept-Encoding: gzip
+Accept-Language: en
+Accept-Charset: iso-8859-1,*,utf-8
+Content-type: application/x-www-form-urlencoded
+Content-length: 44
+
+FirstInput=123&SecondInput=abc&Submit=Submit
+</textarea>
+
+<p>Notice that in the above information sent from the browser to the server after clicking the "Submit" button, the command is "POST" instead of "GET" because the client is trying to send, thus <em>post</em>, information to the server. The amount and the content of the information sent from the client to the server is included in the message as well. The amount of information is indicated by the attribute <em>Content-length</em> which has the value of 44 which, in turn, means the content of the form is 44 bytes long. The actual content of the <em>post</em>, i.e., the content of the form is followed after the <em>Content-length</em> attribute, separated by a pair of newline <code>NL</code> and carriage return <code>CR</code>. Remember that a pair of newline and carriage return by itself in a line indicates the end of the header in HTTP. In our example, the content is a string of 44 characters as follows.</p>
+
+<pre>
+FirstInput=123&amp;SecondInput=abc&amp;Submit=Submit
+</pre>
+
+<p>The content of the form submission is divided into pairs of <em>(key=value)</em>, separated by an &amp;. For example, the above submission form contains three pairs of key and value. The first one is <em>FirstInput</em> which is the label of the text input box in the original form, and <em>123</em> which is the value corresponding to this key. The second is the string text we typed. The third one is the <em>Submission</em> button. When parsing out this form submission, the server can figure out what is sent from the client. If the server is a search engine, the server then takes this input as a search query and sends the search result back to the client in an HTML format.</p>
+
+<h4>2.3 Make your server program a search engine for web page out-degree count</h4>
+
+<p>Now that we know the basics of a search engine, this part of the project is to make your server a search engine that can answer queries about the out-degree of a web page in a collection of web pages. That is, if a client wants to find out how many out-going HTML links a target web page contains, your search engine should be able to provide this answer in an HTML formatted output.</p>
+
+<p>In the first phase of the project, you wrote a client program that can access a web page and extract all the out-going HTML links in the target web page. In this phase of the project, your server program reads this information (either from a file saved by the program in the first phase, or from a communication channel such as pipe, or shared memory) and sends the result back to the client (typically, a browser) in an HTML format.</p>
+
+<p>Here is a typical scenario of the interaction between the server (your program) and a client (e.g., a browser).</p>
+<ul>
+  <li> The server program starts on a computer (e.g., dana213-lnx-1) and listens at a port assigned to you (e.g., 2500).</li>
+
+  <li> The client, e.g., a web browser accesses the server by giving a proper URL, for example <code>http://dana213-lnx-1:2500/</code>.</li>
+
+  <li> The server posts a web page containing a form submission section (e.g., the file <em>form.html</em>) with some other welcoming message from your team.</li>
+
+   <li> The client then enters a target URL to the text input box and clicks the "Submission" button. Note that format of the form and the name of the button should be changed to your favorite choices.</li>
+
+   <li> The server parses out the request from the client and sends back the statistics about the target web page in a well-formatted HTML page.</li>
+</ul>
+
+<h4>Deliverable of phase two</h4>
+
+<p>You are to submit to your Gitlab account the following by the deadline.</p>
+
+<ol>
+  <li> Completed code of your server (and client from the first phase if your server depends on that for its data).</li>
+
+  <li> Screen shots of sample runs. Try your server program (thus the client from the first phase as well) with a few different web pages. The data must include Bucknell's main web page. The output should be a count of the out-going URL links in the target page and up to 20 actual URLs that are click-able.</li>
+
+  <li> A text file that contains a brief description about this phase of the project that include team member names, high lights the challenges your team encountered, and any thoughts that you'd like to share. The length of the description should not be more than two pages or 800 words.</li>
+</ol>
+
+<a id = "p1part3"></a><h3>Phase 3: Collect Pages from Bucknell Domain</h3>
+
+<p>After completing the first two phases, now you have a pair of programs, a client program and a server program. The client program is able to retrieve a web page from a given website and to parse out all URLs in that page. The server program is able to take a URL as a query from a web browser and can send back the count of out-going URLs and the first 20 of these URLs.</p>
+
+<p>Your next task is to further develop the client program so it can retrieve multiple web pages in a given domain. We can call this program that is able to collect multiple web pages a <em>crawler</em> (Please refer to the <a href = "./projects/client-server-project.html#arch-figure">architecture figure</a>.) In addition to collecting the pages, you are also extending the capability of the <em>parser</em> so that the <em>parser</em> can build a relationship matrix that a row at <em>x</em> in the matrix contains all the URLs retrieved from page <em>x</em>. Let's look at some of the details.</p>
+
+<h4>3.1 Crawling the web</h4>
+
+<p>In Phase 2 of the project, you completed a client program that can retrieve a web page from a given URL and parse out all the URLs contained in that web page. Now if your client program follows each of these URL links harvested in the page to retrieve more pages, the program becomes a <em>crawler</em> that is able to retrieve all web pages in a connected component of a web. The <em>connected component</em> here has exact the same meaning as you learned in your data structures class, that is, a root node (web page) can reach any node (web page) in the collection as a directed graph. Viewing from the graph perspective, a crawling process really becomes a traversing process. The starting web page becomes the root of the tree in this directed graph, the task of a crawler is to traverse all the nodes in the graph by either a breadth-first traversal, or a depth-first traversal. For our purpose, we are going to pursue a breadth-first traversal. Depth-first traversal works in a similar way, using a different type of data structure.</p>
+
+<p>How do we perform a breadth-first traversal in a graph from a given starting node <em>x</em>? We can use a <em>queue</em> data structure to resolve this problem. Assume we have a starting page <em>x</em> and a queue <em>toVisitQ</em>, a breadth-first traversal can be accomplished as follows.</p>
+<textarea rows = "15" cols = "120">
+initialize toVisitQ to be empty
+insert x into toVisitQ
+count = 0
+while (toVisitQ is not empty and count < limit) { // "limit": maximum # of pages to visit
+   y = dequeue(toVisitQ)
+   if y should be visited
+      visit y
+      count ++
+      list = parseURL(y)
+      for each w in list
+         enqueue(w, toVisitQ)
+}
+</textarea>
+<p>We need to set a reasonable <em>limit</em> so the crawling process doesn't take too long. I would suggest a few thousands to a few tens of thousands as a limit. We can also gradually update this limit (see notes later in Section 3.3.)</p>
+
+<p>A number of factors should be considered when deciding if a page should be visited. First of all, a page that has been visited before should be never visited again. Otherwise the traversal would go into an infinite loop. Second, for our purpose, we should only visit text based pages such as HTML files or plain text files. We can simply use file extension to check to see if a web page falls into these text file categories. (In Bucknell domain, an HTML page would have the extension of *.html or *.xml, while a text file typically has the extension of *.txt.) If you would like, you could also visit and index pages in PDF using some Unix facility (or other program) that can convert a PDF file into a text. But this is not required.</p>
+
+<p>We should limit our crawler to visit web pages in Bucknell domain only. That is, we don't want to visit an URL that is pointing to pages outside of <code>bucknell.edu</code>. This should be a critical factor to consider when deciding whether or not to visit a web page.</p>
+
+<h4>3.2 Building a degree matrix</h4>
+
+<p>The second task is to build a degree matrix for the visited web pages. Assume your crawler visited <em>n</em> web pages, each of these <em>n</em> pages contains a number of <em>m</em> links that point to other web pages. If we consider the entire collection of <em>n</em> web pages, we can form a <em>n X n</em> matrix, each element <em>n<sub>i,j</sub></em> indicates the number of times page <em>i</em> points to page <em>j</em>. If we have the following <em>4 X 4</em> matrix,</p>
+<textarea rows = "8" cols = "80">
+    p0  p1  p2  p3
+p0  1   1   3   0
+p1  1   0   1   2
+p2  1   2   0   0
+p3  0   0   2   0  
+</textarea>
+<p>the matrix indicates that web page <em>p0</em> contains five URL links, one is pointing to itself, one is pointing to <em>p1</em> and three are pointing to <em>p2</em>. The other rows have the similar interpretation.</p>
+
+<p>The logical concept here isn't very complicated. However we need to pay attention to some of the technical, or engineering issues.</p>
+<ul>
+  <li> The matrix is huge as the number of rows and columns are in the order of <em>limit</em> specified earlier. We could have tens of thousands rows. In addition, the matrix is likely very sparse. It is not efficient to implement such matrix as a plain 2-D array. You may consider using linked lists or other data structures to implement it.</li>
+
+   <li> You need to maintain a map between a row (column) index and the actual URL. While some programming languages support some form of associative indexing, you can't use strings to index an array or matrix in C. What you need to do is to have a separate mapping between URL and index (an integer), and use this index to maintain and access the matrix.</li>
+</ul>
+
+<h4>3.3 Collecting data incrementally</h4>
+
+<p>While collecting web pages over the network, we should consider two issues. One is that we try not to overcrowd the network; the second is that we should try not to repeat the work that has been done. We will discuss these two issues here in this section.</p>
+
+<p>Network capacity is very precious resource. We should use it very carefully. We can choose our program options to make our program less aggressive in terms of using network capacity. At the same time, doing so can also save our own time in running the program less frequently. We can do at least the following two things to help this issue.</p>
+<ul>
+  <li> Visit the web server <code>bucknell.edu</code> with breaks in between some number of pages. For example, for each 20 pages you visit, stop your crawler a few seconds using the Linux <code>sleep()</code> function.</li>
+
+  <li> Run your crawler incrementally. You can run your crawler with a starting web page. Then stop the crawler after reaching certain number of visited pages (e.g., a few hundred). Save the state of your crawler in a disk file before next run. The state you need to keep in order to run the crawler in consecutive times includes the contents of following variables, the queue of URLs to be visited, the list of URLs already visited, the matrix that contain the association between URLs that have been visited. With these information, you can restart your crawler from where it left last time. The new starting page should be the first page in your queue of URLs to be visited.</li>
+</ul>
+
+<h4>Deliverable of phase three</h4>
+
+<p>You are to submit to your Gitlab account the following by the deadline.</p>
+
+<ol>
+  <li> Completed code of your programs.</li>
+
+  <li> Data file(s) that contain the current information of your crawling. As stated in the project description, this data file should contain the current list of to-be-visited URLs, the visited URLs, and a total count of how many pages the crawler has visited (length of the visited URLs data structure.)</li>
+
+  <li> Screen shots of sample runs. Try your server program with a few different web pages. The output should be a count of the out-going URL links in the target page and up to 20 actual URLs that are click-able.</li>
+
+  <li> A text file that contains a brief description about this phase of the project that include team member names, high lights the challenges your team encountered, and any thoughts that you'd like to share. In particular, <b>instructions how to run your program(s) should be included.</b> The length of the description should not be more than two pages or 800 words.</li>
+</ol>
+
+<a id = "p1part4"></a><h3>Phase 4: Put Everything Together</h3>
+
+<p>Just like you did in previous phases, create a separate directory for this phase so the programs can be better organized and located.</p>
+
+<p>Upon completing Phase 3, your programs should be able to collect a set of web pages and serve user queries by returning a portion of the list of URLs present on a particular web page (query). As a result, you should have a collection of data (e.g., a linked list) where each node represents a web page and the node contains a list of URLs found in the web page.</p>
+
+<p>In the final phase of the project, you are asked to complete the programs so that the programs can answer two types of queries. One type of query is for a given URL, compute the count and display the first set (20) of web pages that point to this URL. The second is to display the set of URLs of top-20 most popular web pages in your collection. The popularity count here is defined as the in-coming links to a web page (i.e., how many other web pages are pointing to the target page.)</p>
+
+<p>In order for your program to answer one of two types of queries, the program will need to use two <em>submission boxes</em>, one for web page query, the other for the count query. The one with count query does not need an input box. It will simply be a <em>submission</em> button.</p>
+
+<p>You may use any reasonable data structures and algorithms you wish to use. If you have a large collection of pages, e.g., a few thousands to a few tens of thousands, a plain 2-D array implementation of matrix is probably not a very good data structure. In general, if you have used a linked list structure to represent your matrix in Phase 3 (a list of lists), you can build an inverse-list in addition to the original list in this phase. Let's call this inverse list of lists <em>L</em>. You can then build two sorted lists (list of pointers to the original <em>L</em>), one sorted by alphabetical order (the name of the URL), the other sorted by the count of the web pages pointing to the target web page. Doing so allows the user to search either by the URL name, or by the count of the web pages.</p>
+
+<h4>
+<h4>Deliverable of phase three</h4>
+
+<p>You are to submit to your Gitlab account the following by the deadline.</p>
+<ol>
+  <li> Completed code of your programs.</li>
+
+  <li> Data file(s) that are used and generated by the programs.</li>
+
+  <li> Screen shots of sample runs. Try your program with a few different web pages. The output should be a count of the in-coming URL links to the target page and up to 20 actual URLs that are click-able. Also try your program with the query of the top 20 most popular page</li>
+
+  <li> A text file that contains a brief description about this phase of the project that include team member names, high lights the challenges your team encountered, and any thoughts that you'd like to share. In particular, <b>instructions how to run your program(s) should be included.</b> The length of the description should not be more than two pages or 800 words.</li>
+</ol>
+
+
+</body>
+</html>

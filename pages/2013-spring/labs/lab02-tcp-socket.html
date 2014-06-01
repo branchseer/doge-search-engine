@@ -1,0 +1,289 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CSCI 363 &mdash; Computer Networks -- Labs</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+  <link rel="stylesheet" type="text/css" href=
+  "http://www.eg.bucknell.edu/~cs363/common-files/course.css">
+  <base href="http://www.eg.bucknell.edu/~cs363/2013-spring/">
+  <script type = "text/javascript" language = "JavaScript" src ="/~cs363/common-files/courseinfo.js">
+</script>
+</head>
+
+<body>
+<!-- header starts -->
+<div id = "header">
+<script type = "text/javascript" language = "JavaScript">
+insertHTML('/~cs363/common-files/cs363header.html', 'header');
+</script>
+</div>
+<!-- header ends -->
+<h2>Lab 02: TCP Socket Programming and Concurrent Servers</h2>
+
+<h4>Goals</h4>
+<ul>
+   <li> <b>Be able to program using TCP sockets:</b> We will learn to construct client/server networked applications using sockets based on the TCP transport protocol. The service model of the TCP transport protocol creates an abstraction that is quite comfortable to use: a reliable stream of bytes, that not only guarantees that no data is ever lost, but also that it is always delivered in the order in which it was sent.</li>
+
+    <li> <b>Build a concurrent server:</b> Having a server that can only process one request at a time is rarely the most desirable outcome. In this lab, you will experiment with two server designs, a single-thread one and a concurrent one. The concurrent server will use processes created with the <b>fork()</b> system call.
+</ul>
+
+<h4>Credits</h4>
+
+<p>The material developed for this lab was developed from various sources. We acknowledge the direct and indirect contributions by Prof. Felipe Perrone (Bucknell University),  Prof. Xiannong Meng (Bucknell University), and Prof. Phil Kearns (The College of William & Mary). Also, some of this lab is based on material from <em>Unix Network Programming Volume 1</em>, by W. Richard Stevens, Bill Fenner, and Andrew M. Rudoff (Addison Wesley, 2004).</p>
+
+<p>Permission to reuse this material in parts or in its entirety is granted provided that the credits note is not removed. Additional students files associated with this lab, as well as any existing solutions can be provided upon request by e-mail to <em>perrone[at]bucknell[dot]edu</em>.</p>
+
+<h4>Call Wrappers</h4>
+
+If you want to make sure that you are writing safe programs that identify error condition and take actions when needed, you need to check the return value of all system and library calls you use. For instance, when you create a Unix pipe, if the call return value is -1 something bad happened. The manual page for <b>pipe(2)</b> states that in that case, the <b>errno</b> internal variable is set appropriately, meaning that you should call <b>perror(3)</b> to see what caused the error. You could, in every occasion you use system call <b>pipe</b> do something like:
+
+<pre>
+int retval;
+int fd[2];
+retval = pipe(fd);
+if (-1 == retval) {
+  perror("error creating pipe");
+  exit(-1); // to indicate abnormal termination
+}
+</pre>
+
+In fact, you could do something like that for every system or library call you ever invoked. And that would turn out to be a pain. It would be much easier if you write "wrappers" to these calls to do the dirty work for you. For instance, if you had a wrapper for <b>pipe</b> called <wp_pipe</b>, you could simply do:
+
+<pre>
+#include "wrappers.h"
+int retval;
+int fd[2];
+wp_pipe(fd);
+...
+</pre>
+
+<p>Assuming that <em>wrappers.h</em> and <em>wrappers.c</em> have the code for your programmer friendly function wrappers, you would never have write all that error checking code again. Your programs would be safer (because they would be always checking for error conditions) and easier to read.</p>
+
+<h4>TCP Sockets</h4>
+
+<p>You have learned that the Unix <b>pipe</b> is a construct for interconnecting two processes that executed on the same machine. Unix pipes follow the byte stream service model, meaning that you work with them by pushing bytes in on the<em>write</em> end and pulling bytes out from the <em>read</em> end. Since access to pipes is provided via Unix file descriptors, the programmer can use the same file <b>read(2)</b> and <b>write(2)</b> system calls to operate on pipes.</p>
+
+<p>The concept of a TCP socket is very similar to that of a pipe. The most fundamental difference is that TCP sockets serve to interconnect two processes that execute on arbitrary machines. Whether the two processes execute on the same host or on networked hosts across the world from each other, the set up and operations on the sockets are the same.</p>
+
+<p>You should think of a socket as a communication endpoint. If a socket interconnects processes on arbitrary hosts on the Internet, the first thing that should occur to you is that sockets must be related to Internet addresses. When we say Internet address, it might occur to you that were somehow referring to IP addresses, which we use to pinpoint hosts on the Internet. An IP address, however, can only identify a host, not an application process within that particular host. If you need to pinpoint a specific application process within a host, you need to extend this concept of address to the pair <em>&lt;IP address, port number&gt;</em>, where port number serves to identify an application within a host. This mapping of application to port number doesn't happen by magic, of course. An application must bind to a port number within a given host and it must choose a port number that is not used by the system for a standard service. Take a look at the text file <font color=red>/etc/services</font> to find a large number of <em>well-known</em> port numbers that are used by standard applications. The port numbers you use should in your own application programs never conflict with these. In fact, you should be using port numbers in user space, so the instructor will assign each student unique port numbers to use in their programs for this class.</p>
+
+<p>In this lab you will work with a pair of programs which implement the client/server paradigm. The server will be a type of program known as <b>daemon</b>, which performs the following tasks on an infinite loop: wait for a request to arrive, process the request, and send back a response. The client will be a program that crafts a request, sends it to the server, receives and processes the response, and then terminates.</p>
+
+<p>The basic design pattern for client/server applications based on TCP sockets is illustrated in the figure below.  This figure shows the sequence of calls to functions in the socket library that are appropriate for the client process and for the server process. Take the time to read the manual pages for the library calls that are new to you (that is, <b>connect, listen,</b> and <b>accept</b>). TCP sockets implements a high level abstraction that gives the programmer a communication channel across networked hosts that is reliable and order-preserving following the same byte-stream service model of pipes.</p>
+
+<center>
+<p>
+<img src = "labs/tcplab-236x300.png" width = "395" height = "500">
+</p>
+</center>
+
+<p>Next, look at the client/server pair given to you in files <em>getfile.c</em> and <em>fileserver.c</em> and do your best to try to understand the source code. In these files you will notice that we read from and write to sockets with the same read and write system calls that we would use for file I/O and pipes. Therein lies a danger, however. You will be asked to execute these programs to fetch a file and you will observe that when you call read or write you may, respectively, either input or output fewer bytes than were requested. What causes this behavior is the fact that when these calls are made buffer limits may be reached for this socket inside the kernel. Whenever this happens, you will need to invoke <b>read(2)</b> or <b>write(2)</b> repeatedly to complete reading or writing the remaining bytes desired.</b>
+
+<p>When you know the exact number of bytes expected in a reading or writing call, we recommend that instead of calling <b>read</b> or <b>write</b> directly, you call the functions <b>readn</b> or <b>writen</b> provided to you, in files <em>readn.c</em> and <em>writen.c</em>, respectively. They guarantee that your requests for input or output don't ever return with a short count. Read the implementations of these functions and understand how they work. If you don't know the number of bytes in reading, for example, when the server reads a file name of unknown characters from a client, you can have the writing party (e.g., the client which is sending the file name to the server) to send an integer telling the receiving party how many bytes to expect first, then actually send the content, using the following pattern.</p>
+<pre>
+/* Code for the sender: */
+/* The sender first sends the expected number of bytes to the receiver */
+char *filaname = "hello.txt";
+int  expected_length = strlen(filename);
+bytes_sent = writen(sockID, &expected_length, sizeof(int));
+
+/* The sender then sends the actual filename */
+bytes_sent = writen(sockID, filename, expected_length);
+...
+
+/* Code for the receiver: */
+/* The receiver first reads how long the incoming message will be */
+int expected_length;
+bytes_read = readn(sockID, &expected_length, sizeof(int));
+char filename[expected_length + 1];
+
+/* The receiver then reads the actual file name */
+bytes_read = readn(sockID, filename, expected_length);
+filename[expected_length] = 0; // terminate the string
+</pre>
+
+<p>The above pattern works well with small amount of data. If the amount of data passed between the sender and the receiver is large, it would be best to call the <em>read</em> or <em>readn</em> (and <em>write</em> or <em>writen</em> on the sending side) repeatedly until the correct number of bytes is processed.</p>
+
+<h4>Concurrent Servers</h4>
+
+<p>The code you are getting for this lab contains a naive design for a client/server application that imposes a severe restriction: all requests to the server are processed sequentially, in the order of their arrival. That means, a long request which arrives first will block the execution of a short request that may take a much smaller fraction of time to complete. In order to guarantee that requests are not forced to wait indefinetly for the completion of very long requests and keep the response time of your server down, you need to resort to concurrency.</p>
+
+<p>The first concurrent server design we propose is based on operating system processes created with the <b>fork()</b> system call. The basic design pattern for such a server is outlined below:</p>
+
+<pre>
+#define LISTENQ 8
+
+pid_t  pid;
+int listenfd, connfd;
+
+listenfd = socket( ... );  // fill in sockaddr_in with server's well-known port
+bind((listenfd, ... );
+listen(listenfd, LISTENQ);
+
+for (;;) {
+    connfd = accept(listenfd, ... ); // probably blocks here
+    if ((pid = fork()) == 0) {
+        close(listenfd);     // child closes listening socket descriptor
+        process_request(connfd);
+        close(connfd);       // done serving this client
+        exit(0);             // child terminates successfully
+     } else  {
+        close(connfd);       // parent process closes 'connfd'
+     }
+}
+</pre>
+
+<p>Note that in order to use this design pattern, you need to encapsulate the entire handling of a service request in a function, which must be defined as:</p>
+
+<p><font color=red><b>
+void process_request(int fd);
+</b></font></p>
+
+<p>The general idea of this pattern is that the server process listens for client requests on a socket bound to a well-known port. Every time a client attempts to connect to your server, the server spawns off a child process to handle the clients request while keeping listening on its well-known port for other potential client requests. The maximum number of connection attempts that can be queued in the listening socket is defined as <b>LISTENQ</b>, but the pattern above does not limit the number of children that can be created to execute concurrently.</p>
+
+<p>An easy way to overwhelm the machine running the server would be to bombard the server with numerous requests that take a long time to process. If the number of concurrent process rises beyond a tolerable level, the machine will spend most of its time scheduling processes around without getting much work done. Future legitimate requests to this server would effectively be denied processing. In order to prevent against this form of denial of service attack, the server should limit the number of children processes executing concurrently.</p>
+
+<h4>Setup</h4>
+
+<p>All the files you will need to start your work on this lab can be found at:
+<code>~cs363/Spring13/student/labs/lab02/</code>. Copy all the files in that directory to your <code>lab02</code> directory by the following commands.</p>
+<font color=red><b>
+<ul>
+    <li>cd ~/csci363-s13/labs</li>
+    <li>mkdir lab02</li>
+    <li>git add lab02</li>
+    <li>cd lab02</li>
+    <li>cp ~cs363/Spring13/student/labs/lab02/* .</li>
+</ul>
+</b></font>
+<p>Among all files you copied, one is called <em>port-assignment.txt</em> which specifies the port numbers we should use in this class. Take a look at that file and identify the port numbers you should use. From now on, you should use these two assigned port numbers for your lab exercises and programming exercises.</p>
+
+<h4>Add .gitignore file to your Git environment</h4>
+
+<p>So far, we have archived all files into our Git repository. Many of the files do not need to be saved, for example, the object files, or back-up files left by an editor. Git can ignore these files when archiving your project. All you need to do is to set up a <em>.gitignore</em> file in your repository.</p>
+
+<p>In this lab, we have created a <em>.gitignore</em> file for you. First copy the suggested source file, name it <em>.gitignore</em>,  then revise it as you see fit. Assume you are in your <em>~/csci363-s13/labs/lab02</em> directory.</p>
+
+<font color=red><b>
+<ul>
+    <li>cp gitignore.txt ~/csci363-s13/.gitignore</li>
+    <li>git add ~/csci363-s13/.gitignore</li>
+    <li>git commit -m "added .gitignore"</li>
+    <li>git push</li>
+</ul>
+</b></font>
+
+<h4>Problem 1: Write system call wrappers</h4>
+
+<p>Go over the code for <em>fileserver.c</em> and <em>getfile.c</em> given to you and identify all invocations to system calls and library functions. Understand the purpose of each system or library call and how they work. You should be referring to resources such as the UNIX manual pages, Stevens/Rago text, or the web to understand how these programs work.</p>
+
+<p>Except for the <b>read</b>, <b>write</b>, <b>send</b>, and <b>recv</b> calls, write a "wrapper" for all other calls by building a header file called <em>wrappers.h</em> and an implementation file called <em>wrappers.c</em>.  The wrapper for each call must check the return value of the actual system or library call to identify whether an error has occurred; if there has been error, the wrapper will call <b>perror(3)</b> and <b>exit(3)</b> passing the appropriate parameters, or do nothing extra if there is no error (note that certain calls require a return value to be used by the application, which the wrappers must do the same.) Revise the <em>Makefile</em> given to you so that these files become part of the dependency lists in the rules to build programs that use your wrappers. Experiment with the <b>make</b> command to make sure that when any of your wrapper files are changed, all your executables that depend on the changed wrapper(s) are indeed rebuilt.</p>
+
+<p>In addition to writing the wrappers, make sure to edit the file <em>lab2.h</em> to reflect the port number you have been assigned. Use a file like this to define any port number for the sockets your applications create.</p>
+
+<p>When youre done with this problem, you need to do:</p>
+
+<font color=red><b>
+<ul>
+    <li>git add ~/csci363-s13/labs/lab02</li>
+    <li>git add lab2.h</li>
+    <li>git add wrappers.h</li>
+    <li>git add wrappers.c</li>
+    <li>git add Makefile</li>
+    <li>git commit -m "Lab 2, problem 1 completed"</li>
+    <li>git push</li>
+</ul>
+</b></font>
+
+<h4>Problem 2: Complete the construction of the file transfer application</h4>
+
+<p>The code given to you in files <em>getfile.c</em> and <em>fileserver.c</em> outlines an application for file transfer using TCP sockets. The server understands two kinds of commands:</p>
+<ul>
+    <li><font color=red><b>file</b></font> --- which requests the transfer of a file from the server to the client host</li>
+    <li><font color=red><b>stat</b></font> --- which requests from the server utilization statistics.</li>
+</ul>
+
+<p>Compile these programs and experiment with them: run a server on your own assigned port number on a remote machine and connect to it with the client requesting the transfer of any "long" text file of your choosing (<b>/etc/services</b>, for instance). Observe what happens it is highly likely that the client will not display on the standard output (your shell) the entire contents of the file requested. Observe also the strings sent to standard output by the server: is there anything that needs fixing?</p>
+
+<p>Your first task is to modify this pair of programs to add the functionality below:</p>
+<ol>
+    <li>Experiment with the code given to you and attempt to identify any bugs or points that call for improvements. If you change anything in this code in response to your experiments and observations, make sure to indicate what was changed with comments in the source.</li>
+
+    <li>Rewrite these two programs so that they use the wrappers to system and library calls you created in <b>Problem 1</b>.</li>
+
+     <li>Based on the client <em>getfile.c</em>, create another client called <em>getstats.c</em>, which sends to the server a request for its internal status (that is, the statistics it keeps) and displays it on the standard output.</li>
+
+      <li>Modify <em>getfile.c</em> and <em>fileserver.c</em> to use the <b>readn</b> and <b>writen</b> functions when appropriate.</li>
+
+      <li>Modify <em>fileserver.c</em> so that the processing of a clients request is encapsulated in a single function with prototype <b>void process_request(int fd);</b></li>
+
+      <li>Test your programs to make sure they work correctly in various conditions.</li>
+
+     <li>Create a text file called <em>lab02-ansewrs.txt</em>, put your name, the course number, the lab number, and date in the file. Record a session of exeucting your programs that demonstrates your programs work correctly, including requesting and transferring a very large (e.g., <em>/etc/services</em>) and a very small text file (e.g., <em>~/.bashrc</em>). When requesting a large file, make sure you redirect the output on the client side to a file so the <em>lab02-answer.txt</em> doesn't include the content of the file being transferred.<br>
+
+<p><b>Hint:</b> You can sort the listing of files by size using the command<br>
+<font color=red><b>ls &nbsp; -lS</b></font><br>
+that is, listing with the option of 'l' as in <em>long</em> and 'S' as in <em>size</em>.</p></li>
+</ol>
+
+<p>When youre done with this problem, you need to do:</b>
+<font color=red><b>
+<ul>
+    <li>git add getfile.c</li>
+    <li>git add fileserver.c</li>
+    <li>git add getstats.c</li>
+    <li>git add Makefile</li>
+    <li>git add lab02-answer.txt</em></li>
+    <li>git commit -m "Lab 2, problem 2 completed"</li>
+    <li>git push</li>
+</ul>
+</b></font>
+
+<h4>Problem 3: Add concurrency to your server</h4>
+
+<p>Using the design pattern for a concurrent server provided to you earlier in this lab, modify your server to spawn off a new child process every time it receives a request from a client. Add appropriate wrapper functions. Make sure to limit the maximum number of concurrent processes your spawn off so that your server is not easy prey to <em>denial-of-service</em> attacks.</p>
+
+<p>Start your concurrent server program. Then run both client programs (<em>getfile</em> and <em>getstats</em>) multiple times with various files and stats requests. Observe usage stats received by the client. Do you see any problems? Why? How would you fix such problem(s)? Write what you see and what you think in your <em>lab02-answer.txt</em>.</p>
+
+<p>When youre done with this problem, you need to do:</p>
+
+<font color=red><b>
+<ul>
+    <li>git add lab02/getfile.c</li>
+    <li>git add lab02/fileserver.c</li>
+    <li>git add lab02/getstats.c</li>
+    <li>git add lab02-answer.txt</em></li>
+    <li>git commit -m "Lab 2, problem 3 completed"</li>
+    <li>git push</li>
+</ul>
+</b></font>
+
+<p><b>A note on byte manipulation functions</b></p>
+
+<p>There are two groups of  functions for setting bytes in memory, copying them around, or comparing them. One corresponds to Berkeley-derived functions:</p>
+
+<pre>
+#include <string.h>
+void bzero(void *dest, size_t nbytes);
+void bcopy(const void *src, void *dest, size_t nbytes);
+int bcmp(const void *ptr1, const void *ptr2, size_t nbytes);
+</pre>
+
+<p>The other set comes from the ANSI C standard and the functions are provided with any system that supports the ANSI C library:</p>
+
+<pre>
+#include <string.h>
+void *memset(void *dest, int c, size_t len);
+void *memcpy(const void *dest, void *src, size_t nbytes);
+int memcmp(const void *ptr1, const void *ptr2, size_t nbytes);
+</pre>
+
+<p>It can be argued that the ANSI C standard functions are more portable. (The choice you make for one set or the other should'nt affect the perfomance of your applications.) If you happen switch around from one set of functions to the other, however, be extra careful in observing the type and order of parameters that each of these functions takes and also the data type each function returns. Comparing the functions for copying bytes, for instance, you will notice that source and destination pointers are swapped, what will make a big difference in your code if you mistakingly assume that the order and the semantics of the parameters is the same in both cases.</p>
+
+<font color=red><font size += 2><b>IMPORTANT</b></font></font>
+
+<p>At the end of todays lab and any further programming/testing sessions programs that use <b>fork()</b>, make sure to leave no processes running in the background before you log off. When you are done, make sure to terminate your server process.</p>
+
+</body>
+</html>
