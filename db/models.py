@@ -18,10 +18,10 @@ class Document(Base):
   
 class TermFrequency(Base):
   __tablename__ = 'term_document_frequencies'
-  #id = Column(Integer, primary_key=True)
-  term_id = Column(Integer, ForeignKey('terms.id'), primary_key=True)
-  document_id = Column(Integer, ForeignKey('documents.id'), primary_key=True)
-  frequency = Column(Integer)
+  id = Column(Integer, primary_key=True)
+  term_id = Column(Integer, ForeignKey('terms.id'))
+  document_id = Column(Integer, ForeignKey('documents.id'))
+  frequency = Column(Integer, default=1)
   
       
 if __name__ == '__main__':
