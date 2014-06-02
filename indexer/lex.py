@@ -12,9 +12,9 @@ def tokenize_html(html):
   for link in soup.find_all('a'):
     links.append((link.text, link.get('href')))
     
-  return words, links
+  return soup.title.text, words, links
 
 if __name__ == '__main__':
-  words, links = tokenize_html(open('../pages/2013-spring/index.html').read());
+  title, words, links = tokenize_html(open('../pages/2013-spring/index.html').read())
   for text, url in links:
     print(text)
