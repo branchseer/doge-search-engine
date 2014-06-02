@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 
 import sys
 sys.path.append('..')
@@ -17,6 +17,8 @@ from search import search
 @app.route('/search')
 def handle_search():
   query = request.args.get('q')
+  if not query:
+    return redirect("/")
   results = search(query)
   return render_template("search.html", query=query, results=list(results))
 
