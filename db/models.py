@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, MetaData, ForeignKey 
+from sqlalchemy import Column, Integer, String, MetaData, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
@@ -15,6 +15,8 @@ class Document(Base):
   id = Column(Integer, primary_key=True)
   url = Column(String(500))
   terms = relationship("TermFrequency", backref="document")
+  title = Column(String(200))
+  date = Column(DateTime())
   
 class TermFrequency(Base):
   __tablename__ = 'term_document_frequencies'
