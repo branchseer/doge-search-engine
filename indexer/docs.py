@@ -8,7 +8,7 @@ def documents(page_folder = path.join('..', 'pages')):
       
       if extension in ['.html', '.htm', '.txt']:
         filepath = path.join(dirpath, filename)
-        file = open(filepath)
+        file = open(filepath,'r',encoding= 'gbk')
         file_content = file.read()
         file.close()
         yield filepath[len(page_folder) + 1:], file_content

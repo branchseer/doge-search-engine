@@ -1,6 +1,6 @@
 
 def stopwords(stopwords_file='stopwords.txt', delimiter=' '):
-  file = open(stopwords_file)
+  file = open(stopwords_file,'r',encoding= 'utf-8')
   file_content = file.read()
   stopwords_list = file_content.split(delimiter)
   return stopwords_list
