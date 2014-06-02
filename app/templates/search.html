@@ -9,16 +9,35 @@
     <link rel="stylesheet" href="style/search.css" />
   </head>
   <body>
-    <nav class="navbar navbar-default" role="navigation">
+
+    
+    <nav id="navbar" class="navbar navbar-default" role="navigation">
       <span class="navbar-brand">
         <img id="logo" src="image/logo.png" alt="Doge" />
       </span>
       <form class="navbar-form navbar-left" role="search">
         <div class="form-group">
-          <input type="text" class="form-control" placeholder="Type keywords here" value="{{query}}">
+          <input type="text" name="q" class="form-control" placeholder="Type keywords here" value="{{query}}">
         </div>
-        <button type="submit" class="btn btn-default">Search</button>
+        <input type="submit" class="btn btn-default" value="Search" />
       </form>
+      <div class="navbar-brand navbar-right">{{results|length}} results</div>
     </nav>
+    <div class="container">
+      <ul id="result-list">
+        {% for document, frequency in results %}
+        <li>
+          <div class="result-item">
+            <div class="title">{{document.title}}</div>
+            <div class="content">'{{query}}' appears {{frequency}} times in this document.</div>
+            <div class="info">
+              <span class="url">{{document.url}}</span>
+              -
+              <span class="date">{{document.date}}</span>
+          </div>
+        </li>     
+        {% endfor %}
+      </ul>
+    </div>
   </body>
 </html>
