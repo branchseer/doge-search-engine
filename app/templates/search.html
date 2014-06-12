@@ -25,11 +25,15 @@
     </nav>
     <div class="container">
       <ul id="result-list">
-        {% for document, frequency in results %}
+        {% for document, frequencies in results %}
         <li>
           <div class="result-item">
-            <div class="title">{{document.title}}</div>
-            <div class="content">'{{query}}' appears {{frequency}} times in this document.</div>
+            <div class="title"><a href="http://{{document.url}}">{{document.title}}</a></div>
+            <div class="content">
+            {% for keyword, frequency in frequencies %}
+              <p>'{{keyword}}' appears {{frequency}} times in this document.</p>
+            {% endfor %}
+            </div>
             <div class="info">
               <span class="url">{{document.url}}</span>
               -

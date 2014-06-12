@@ -48,13 +48,17 @@
 
 .result-item .content
 {
-  white-space: pre-wrap;
   word-wrap: break-word;
   margin: 0;
-  padding: 5px 0 3px 15px;
+  padding: 3px 0 3px 15px;
   background-color: #E8EFF0;
   border: 1px solid #D3E7E9;
   font-size: 14px;
+}
+
+.result-item .content p
+{
+  margin: 0;
 }
 
 .result-item .info
