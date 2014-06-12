@@ -9,7 +9,7 @@ def documents(page_folder = path.join('..', 'pages')):
       
       if extension in ['.html', '.htm', '.txt', '.jspy']:
         filepath = path.join(dirpath, filename)
-        file = open(filepath, 'r', encoding='gbk')
+        file = open(filepath, 'r')
         file_content = file.read()
         file.close()
         yield filepath[len(page_folder) + 1:], file_content, datetime.fromtimestamp(path.getmtime(filepath))
