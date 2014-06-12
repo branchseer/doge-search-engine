@@ -2,12 +2,12 @@ from os import path, walk
 import time
 from datetime import datetime
 
-def documents(page_folder = path.join('..', 'pages')):
+def documents(page_folder = path.join('..', 'www.seu.edu.cn')):
   for dirpath, dirnames, filenames in walk(page_folder):
     for filename in filenames:
       extension = path.splitext(filename)[1]
       
-      if extension in ['.html', '.htm', '.txt']:
+      if extension in ['.html', '.htm', '.txt', '.jspy']:
         filepath = path.join(dirpath, filename)
         file = open(filepath, 'r', encoding='gbk')
         file_content = file.read()

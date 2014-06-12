@@ -53,7 +53,7 @@ if __name__ == '__main__':
         words = None
         title = filename(filepath)
         
-        if extension in ['.html', '.htm']:
+        if extension in ['.html', '.htm', '.jspy']:
           html_title, words, links = tokenize_html(content)
           html_title = html_title.strip()
           if html_title:
